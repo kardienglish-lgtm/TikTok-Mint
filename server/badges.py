@@ -374,8 +374,7 @@ def public():
     db.close()
 
     out = [badges[key] for key in sorted(badges)]
-    return {"badges": out, "gradients": gradients,
-            "free_until": FREE_UNTIL, "now": int(time.time())}
+    return {"badges": out, "gradients": gradients}
 
 
 def mine(uid):
@@ -680,48 +679,8 @@ def waited(db, table, uid, how_long):
 
 
 def gradient(body, ip):
-    """The colours somebody's name is drawn in, for everyone to see.
-
-    Checked here and nowhere else: the supporter badge, and how long ago this
-    changed. An apk anybody can edit cannot decide who is allowed what.
-    """
-    db = connect()
-    uid = vouched(db, body)
-    if not uid:
-        db.close()
-        return 403, {"error": "prove"}
-    if not supporter(db, uid):
-        db.close()
-        return 403, {"error": "supporters only"}
-
-    left = waited(db, "gradient", uid, GRADIENT_WAIT)
-    if left:
-        db.close()
-        return 429, {"error": "too often", "wait": left}
-
-    asked = body.get("colours")
-    if asked is None:
-        db.execute("DELETE FROM gradient WHERE uid = ?", (uid,))
-        db.commit()
-        db.close()
-        return 200, {"colours": []}
-
-    if not isinstance(asked, list) or len(asked) < 2 or len(asked) > MOST_COLOURS:
-        db.close()
-        return 400, {"error": "two to %d colours" % MOST_COLOURS}
-    colours = [hexed(one) for one in asked]
-    if not all(colours):
-        db.close()
-        return 400, {"error": "colours are six hex digits"}
-
-    db.execute("INSERT INTO gradient (uid, colours, changed) VALUES (?,?,?)"
-               " ON CONFLICT(uid) DO UPDATE SET colours = excluded.colours,"
-               " changed = excluded.changed",
-               (uid, ",".join(colours), int(time.time())))
-    db.commit()
-    db.close()
-    return 200, {"colours": colours}
-
+    """Retired together with supporter badges and name gradients."""
+    return 410, {"error": "name gradients are disabled"}
 
 #: address -> (the hour it was last counted in, how many it sent in it)
 CRASHED = {}
