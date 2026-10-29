@@ -7,34 +7,49 @@ JAVA = ROOT / "inject/java/cat/kardinebi"
 
 
 class ProfileShapesSourceTests(unittest.TestCase):
-    def test_random_avatar_shape_is_gated_to_visible_profile_pages(self):
+    def test_avatar_material_shapes_are_retired_but_profile_backdrop_remains(self):
         avatar = (JAVA / "AvatarShape.java").read_text(encoding="utf-8")
+        settings = (JAVA / "SettingsActivity.java").read_text(encoding="utf-8")
         layout = (JAVA / "ProfileLayout.java").read_text(encoding="utf-8")
-        self.assertIn('if (!randomProfilesEnabled() || !profileVisible() || path == null) return index();', avatar)
-        self.assertIn('static void onProfilePageBound()', avatar)
-        self.assertIn('PROFILE_SHAPES.clear()', avatar)
-        self.assertIn('AvatarShape.onProfilePageBound();ProfileShapes.install(view)', layout)
-        self.assertIn('static boolean currentProfileVisible()', layout)
+        random_method = avatar.split("static boolean randomProfilesEnabled()", 1)[1].split("static void setRandomProfilesEnabled", 1)[0]
+        self.assertIn("return false;", random_method)
+        self.assertIn("Preserve TikTok's native circular avatar masks", avatar)
+        self.assertNotIn("Случайные формы в профилях", settings)
+        self.assertIn("ProfileShapes.install(view)", layout)
+        self.assertIn("this::chooseProfileShapes", settings)
 
-    def test_profile_backdrop_is_static_and_uses_both_accents(self):
+    def test_profile_backdrop_is_static_configurable_and_profile_only(self):
         shapes = (JAVA / "ProfileShapes.java").read_text(encoding="utf-8")
         settings = (JAVA / "SettingsActivity.java").read_text(encoding="utf-8")
+        comments = (JAVA / "Comments.java").read_text(encoding="utf-8")
+        layout = (JAVA / "ProfileLayout.java").read_text(encoding="utf-8")
         self.assertIn('int secondary = SecondaryAccent.colour()', shapes)
         self.assertIn('int primary = Accent.colour()', shapes)
-        # the composition is fixed: no rotation and no frame loop
         self.assertIn('float rotation = 0f;', shapes)
         self.assertNotIn('seconds * 4.0f', shapes)
         self.assertNotIn('scheduleSelf(this', shapes)
-        self.assertIn('0.75f', shapes)  # contour is 0.75dp, not the old 1.25dp
-        self.assertIn('installCommentBackground(View cell)', shapes)
-        self.assertIn('type.contains("RecyclerView")', shapes)
-        self.assertIn('ProfileShapes.installCommentBackground(cell)', (JAVA / "Comments.java").read_text(encoding="utf-8"))
+        self.assertIn('profile_shapes_type', shapes)
+        self.assertIn('profile_shapes_colour', shapes)
+        self.assertIn('profile_shapes_size', shapes)
+        self.assertIn('profile_shapes_stroke', shapes)
+        self.assertIn('static int shapeType(Context context)', shapes)
+        self.assertIn('static int shapeColour(Context context)', shapes)
+        self.assertIn('static int shapeSize(Context context)', shapes)
+        self.assertIn('static int shapeStroke(Context context)', shapes)
+        self.assertIn('static View preview(Context context)', shapes)
+        self.assertIn('ProfileShapes.install(view)', layout)
+        self.assertNotIn('ProfileShapes.installCommentBackground(cell)', comments)
         self.assertIn('AccountAppearance.prefs(context).edit().putBoolean(KEY, on).apply()', shapes)
-        self.assertNotIn('"Случайные формы в профилях"', settings)
-        avatar = (JAVA / "AvatarShape.java").read_text(encoding="utf-8")
-        self.assertIn("static boolean randomProfilesEnabled() {\n        // Profile and comment Material styling is retired.", avatar)
-        self.assertIn("chosen = 0;\n        return 0;", avatar)
         self.assertIn('"Фигуры Material 3 на фоне профиля"', settings)
+        self.assertIn('this::chooseProfileShapes', settings)
+        self.assertIn('ProfileShapes.preview(this)', settings)
+        self.assertIn('ProfileShapes.setShapeType(this, type)', settings)
+        self.assertIn('ProfileShapes.setShapeColour(this, colour)', settings)
+        self.assertIn('ProfileShapes.setShapeSize(this, value + 40)', settings)
+        self.assertIn('ProfileShapes.setShapeStroke(this, value)', settings)
+        self.assertIn('Толщина обводки', settings)
+        self.assertNotIn('Фоновые фигуры в профилях и комментариях', settings)
+        self.assertNotIn('списка комментариев', settings)
         self.assertNotIn('Вращающиеся фигуры', settings)
 
     def test_secondary_accent_has_independent_persistence_and_picker(self):
