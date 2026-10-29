@@ -137,7 +137,7 @@ public static final String KEY = "badges_on";
      * screenshot is not a mark on anybody else's phone, and not on the same
      * phone tomorrow.
      */
-    private static final int MOST = 64;
+    private static final int MOST = 1;
     private static final char FIRST = pick();
 
     private static char pick() {
@@ -337,18 +337,6 @@ public static final String KEY = "badges_on";
         final Runnable then = waiting;
         if (then == null) return;
         new android.os.Handler(android.os.Looper.getMainLooper()).post(then);
-    }
-
-    /** When the free badge stops being given out, as the server reckons it. */
-    private static volatile long freeUntil;
-    private static volatile long serverNow;
-    private static volatile long readAt;
-
-    /** Whether the offer is still open, by the server's clock and not ours. */
-    public static boolean freeStillOpen() {
-        if (serverNow <= 0) return false;
-        long since = (android.os.SystemClock.elapsedRealtime() - readAt) / 1000;
-        return serverNow + since < freeUntil;
     }
 
     /**
