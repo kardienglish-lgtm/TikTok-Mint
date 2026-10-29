@@ -226,21 +226,6 @@ public class SettingsActivity extends Activity {
         shapes.addView(line());
         shapes.addView(toggleRow("image", Text.ROUND_CARDS, Corners.isEnabled(), Corners::setEnabled));
         shapes.addView(line());
-        shapes.addView(toggleRow("account_circle", "Форма аватара Material 3",
-                AvatarShape.isMaterialEnabled(), on -> {
-                    AvatarShape.setMaterialEnabled(this, on);
-                    markChanged();
-                    rebuildAfterSwitchAnimation();
-                }));
-        shapes.addView(quiet("Базовая геометрия применяется в ленте и там, где форма должна оставаться постоянной."));
-        shapes.addView(line());
-        shapes.addView(actionRow("shapes", "Выбрать форму аватара", AvatarShape.nameOf(AvatarShape.chosen()), this::chooseAvatarShape));
-        shapes.addView(line());
-        shapes.addView(toggleRow("shuffle", "Случайные формы в профилях", AvatarShape.randomProfilesEnabled(), on -> {
-            AvatarShape.setRandomProfilesEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
-        }));
-        shapes.addView(quiet("Тонкие геометрические фигуры медленно вращаются за содержимым профилей и списка комментариев. Анимация отключается вместе с системными анимациями."));
-        shapes.addView(line());
         shapes.addView(toggleRow("auto_awesome", "Фигуры Material 3 на фоне профиля", ProfileShapes.enabled(), on -> {
             ProfileShapes.setEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
         }));
@@ -540,14 +525,7 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
         loading.addView(toggleRow("image", Text.ROUND_CARDS, Corners.isEnabled(),
                 Corners::setEnabled));
         loading.addView(line());
-        loading.addView(actionRow("account_circle", Text.AVATAR_SHAPE,
-                AvatarShape.nameOf(AvatarShape.chosen()), this::chooseAvatarShape));
-        loading.addView(line());
-        loading.addView(toggleRow("shuffle", "Случайные формы в профилях", AvatarShape.randomProfilesEnabled(), on -> {
-            AvatarShape.setRandomProfilesEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
-        }));
-        loading.addView(line());
-        loading.addView(toggleRow("auto_awesome", "Фоновые фигуры в профилях и комментариях", ProfileShapes.enabled(), on -> {
+        loading.addView(toggleRow("auto_awesome", "Фигуры Material 3 на фоне профиля", ProfileShapes.enabled(), on -> {
             ProfileShapes.setEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
         }));
         loading.addView(line());
