@@ -1,0 +1,40 @@
+"""Actual notification filtering and account isolation, without requesting permission."""
+import pathlib,shutil,subprocess,tempfile,unittest
+import test_account_appearance_runtime as base
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+class ArchiveNotificationsTest(unittest.TestCase):
+ @unittest.skipUnless(shutil.which('javac') and shutil.which('java'),'JDK required')
+ def test_native_categories_and_explicit_permission_action(self):
+  sources={k:base.STUBS[k] for k in ['android/content/Context.java','android/content/SharedPreferences.java']}
+  sources['android/content/Context.java']=sources['android/content/Context.java'].replace('public static int MODE_PRIVATE=0;','public static int MODE_PRIVATE=0;public int opened;public String getPackageName(){return "host.tiktok";}public void startActivity(Intent i){opened++;}')
+  sources.update({
+ 'android/os/Bundle.java':'package android.os;public class Bundle{private final java.util.Map<String,Object> values=new java.util.HashMap<>();public CharSequence getCharSequence(String k){Object v=values.get(k);return v instanceof CharSequence?(CharSequence)v:null;}public Object get(String k){return values.get(k);}public java.util.Set<String> keySet(){return values.keySet();}public void putCharSequence(String k,CharSequence v){values.put(k,v);}}',
+ 'android/app/Notification.java':'package android.app;public class Notification{public static String CATEGORY_MESSAGE="msg",CATEGORY_PROMO="promo",EXTRA_TITLE="android.title",EXTRA_TEXT="android.text",EXTRA_BIG_TEXT="android.bigText",EXTRA_SUB_TEXT="android.subText",EXTRA_INFO_TEXT="android.infoText";public String category;public CharSequence tickerText;public android.os.Bundle extras=new android.os.Bundle();public Notification(String s){category=s;}}',
+ 'android/app/NotificationManager.java':'package android.app;public class NotificationManager{public int posted;public boolean deny;public void notify(int i,Notification n){if(deny)throw new SecurityException();posted++;}public void notify(String tag,int i,Notification n){notify(i,n);}}',
+ 'android/content/Intent.java':'package android.content;public class Intent{public Intent(String a){}public Intent(String a,android.net.Uri u){}public void putExtra(String k,String v){}}',
+ 'android/net/Uri.java':'package android.net;public class Uri{public static Uri parse(String s){return new Uri();}}',
+ 'android/os/Build.java':'package android.os;public class Build{public static class VERSION{public static int SDK_INT=33;}}',
+ 'cat/kardinebi/Kardinebi.java':'package cat.kardinebi;class Kardinebi{static android.content.Context c=new android.content.Context();static android.content.Context context(){return c;}}',
+ 'cat/kardinebi/AccountAppearance.java':'package cat.kardinebi;class AccountAppearance{static String account="111";static android.content.SharedPreferences prefs(android.content.Context c){return c.getSharedPreferences(account,0);}}',
+ 'cat/kardinebi/Diary.java':'package cat.kardinebi;class Diary{static void note(String s){}}',
+ 'cat/kardinebi/Text.java':'package cat.kardinebi;class Text{static String PLAYER_NOT_READY="";}',
+ 'cat/kardinebi/Screen.java':'package cat.kardinebi;class Screen{static void say(String s){}}',
+ 'cat/kardinebi/ModNotifications.java':(ROOT/'inject/java/cat/kardinebi/ModNotifications.java').read_text(encoding='utf-8'),
+ 'cat/kardinebi/Test.java':HARNESS
+  })
+  with tempfile.TemporaryDirectory() as directory:
+   work=pathlib.Path(directory)
+   __import__("android_doubles").with_mod(sources)
+   for name,source in sources.items():p=work/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(source,encoding='utf-8')
+   result=subprocess.run(['javac','-encoding','UTF-8','-source','8','-target','8','-d',str(work)]+[str(p) for p in work.rglob('*.java')],capture_output=True,text=True);self.assertEqual(0,result.returncode,result.stderr)
+   result=subprocess.run(['java','-cp',str(work),'cat.kardinebi.Test'],capture_output=True,text=True);self.assertEqual(0,result.returncode,result.stderr)
+HARNESS=r'''package cat.kardinebi;import android.app.*;public class Test{static void check(boolean b,String s){if(!b)throw new AssertionError(s);}public static void main(String[] args){
+ NotificationManager m=new NotificationManager();Notification message=new Notification("msg"),promo=new Notification("promo"),unknown=new Notification(null);check(!ModNotifications.noPrompts(),"native prompt unchanged initially");ModNotifications.notify(m,1,message);ModNotifications.set(ModNotifications.MESSAGES,false);ModNotifications.notify(m,2,message);check(m.posted==1,"disabled messages blocked");ModNotifications.notify(m,"tag",3,promo);ModNotifications.notify(m,4,unknown);check(m.posted==3,"promo and unspecified native categories retained");ModNotifications.set(ModNotifications.OTHER,false);ModNotifications.notify(m,5,unknown);check(m.posted==3,"uncategorized obeys other toggle");check(Kardinebi.c.opened==0,"setting toggles never open permission UI");AccountAppearance.account="222";ModNotifications.reload();ModNotifications.notify(m,6,message);check(m.posted==4&&!ModNotifications.noPrompts(),"second account defaults isolated");m.deny=true;ModNotifications.notify(m,7,message);check(m.posted==4,"denied system permission contained");ModNotifications.settings(Kardinebi.c);check(Kardinebi.c.opened==1,"only explicit action opens Android settings");AccountAppearance.account="111";ModNotifications.reload();check(!ModNotifications.option(0)&&!ModNotifications.option(2),"first account filters restored");
+ NotificationManager granular=new NotificationManager();ModNotifications.set(ModNotifications.MESSAGES,true);ModNotifications.set(ModNotifications.OTHER,true);
+ Notification repost=new Notification(null);repost.extras.putCharSequence(Notification.EXTRA_TITLE,"A friend reposted a video you reposted");ModNotifications.set(ModNotifications.REPEATED_REPOSTS,false);ModNotifications.notify(granular,8,repost);check(granular.posted==0,"repeated repost notifications can be disabled");ModNotifications.set(ModNotifications.REPEATED_REPOSTS,true);ModNotifications.notify(granular,9,repost);check(granular.posted==1,"repeated reposts can remain enabled");
+ Notification dm=new Notification("msg");dm.extras.putCharSequence(Notification.EXTRA_TEXT,"New message from your friend");ModNotifications.set(ModNotifications.FRIEND_MESSAGES,false);ModNotifications.notify(granular,10,dm);check(granular.posted==1,"friend messages can be disabled separately");ModNotifications.set(ModNotifications.FRIEND_MESSAGES,true);ModNotifications.notify(granular,11,dm);check(granular.posted==2,"friend messages can remain enabled");
+ Notification activity=new Notification(null);activity.extras.putCharSequence(Notification.EXTRA_TEXT,"A friend commented on your video");ModNotifications.set(ModNotifications.OWN_VIDEO_ACTIVITY,false);ModNotifications.notify(granular,12,activity);check(granular.posted==2,"activity on own videos can be disabled");ModNotifications.set(ModNotifications.OWN_VIDEO_ACTIVITY,true);ModNotifications.notify(granular,13,activity);check(granular.posted==3,"activity on own videos can remain enabled");
+ Notification ruRepost=new Notification(null);ruRepost.extras.putCharSequence(Notification.EXTRA_TEXT,"Друг сделал репост видео, которое вы уже репостнули");ModNotifications.set(ModNotifications.REPEATED_REPOSTS,false);ModNotifications.notify(granular,14,ruRepost);check(granular.posted==3,"Russian repeated repost text is recognised");
+ Notification ruDm=new Notification(null);ruDm.extras.putCharSequence(Notification.EXTRA_TEXT,"Новое сообщение от друга");ModNotifications.set(ModNotifications.FRIEND_MESSAGES,false);ModNotifications.notify(granular,15,ruDm);check(granular.posted==3,"Russian friend-message text is recognised");
+ Notification ruActivity=new Notification(null);ruActivity.extras.putCharSequence(Notification.EXTRA_TEXT,"Пользователь оставил комментарий под вашим видео");ModNotifications.set(ModNotifications.OWN_VIDEO_ACTIVITY,false);ModNotifications.notify(granular,16,ruActivity);check(granular.posted==3,"Russian own-video activity text is recognised");
+}}'''
