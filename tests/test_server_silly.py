@@ -38,37 +38,23 @@ class SillyServerTests(unittest.TestCase):
         badges.DB, badges.WHO = self.was
         self.room.cleanup()
 
-    def test_easter_egg_is_account_owned_idempotent_and_visible_in_public_badges(self):
+    def test_legacy_easter_egg_is_retired_and_public_list_has_one_badge(self):
         body = {"uid": "1111111", "token": "key-1111111"}
-        code, first = badges.easter_egg(body, "ip-one")
-        self.assertEqual(code, 200)
-        self.assertTrue(first["unlocked"])
-        self.assertEqual([item["id"] for item in first["badges"]], ["kardinebi_easter_egg"])
-
-        # Unlocking twice must not create duplicate badges or move its order.
-        code, second = badges.easter_egg(body, "ip-one")
-        self.assertEqual(code, 200)
-        self.assertEqual(second["badges"], first["badges"])
-
+        self.assertEqual(badges.easter_egg(body, "ip-one")[0], 410)
         public = badges.public()
-        badge = next(item for item in public["badges"] if item["id"] == "kardinebi_easter_egg")
-        self.assertIn("1111111", badge["users"])
-        self.assertNotIn("2222222", badge["users"])
+        self.assertEqual([item["id"] for item in public["badges"]], ["oh_its_me"])
+        self.assertEqual(public["badges"][0]["users"],
+                         ["7321751563004052486", "7413409720789369874"])
 
-        self.assertEqual(badges.easter_egg({"uid": "2222222", "token": "wrong"}, "ip-two")[0], 403)
-        self.assertEqual(badges.easter_egg({"uid": "3333333", "token": "key-3333333"}, "ip-three")[0], 403)
-
-    def test_the_calculator_is_for_proved_accounts_and_the_badge_exists(self):
+    def test_the_calculator_is_for_proved_accounts_but_its_prize_is_not_a_profile_badge(self):
         self.assertEqual(badges.dep_play({"do": "state"}, "ip"), (403, {"error": "prove"}))
         self.assertEqual(badges.dep_play({"do": "state", "uid": "3333333", "token": "key-3333333"}, "ip")[0], 403)
         code, said = badges.dep_play({"do": "state", "uid": "1111111", "token": "key-1111111"}, "ip")
         self.assertEqual((code, said["balance"], said["price"]), (200, dep.START, dep.PRICE))
         db = badges.connect()
-        self.assertEqual(db.execute("SELECT title_ru FROM badge WHERE id = ?", (dep.BADGE,)).fetchone(),
-                         ("Калькуляторщик",))
+        self.assertIsNone(db.execute("SELECT title_ru FROM badge WHERE id = ?", (dep.BADGE,)).fetchone())
         db.close()
-        # and the public list of badges still builds with it in
-        self.assertIn(dep.BADGE, str(badges.public()))
+        self.assertNotIn(dep.BADGE, [item["id"] for item in badges.public()["badges"]])
 
 
 if __name__ == "__main__":
