@@ -43,25 +43,9 @@ SCHEMA = """
     );
 """
 
-#: the badge as the table of badges holds it, added the first time the server starts with this
-BADGE_ROW = {
-    "id": BADGE, "colour": "7B4A1E", "image": "calculator.png",
-    "title": "Calculator", "title_ru": "Калькуляторщик", "title_uk": "Калькуляторник",
-    "text": "bought the badge in time, in the collab with Dep Calculator",
-    "text_ru": "успел купить значок в коллаборации с Деп калькулятором",
-    "text_uk": "встиг купити значок у колаборації з Деп калькулятором",
-    "button": "Got it", "claimable": 0,
-}
-
-LUCK = secrets.SystemRandom()
-
-
 def prepare(db):
+    """Create the calculator state table without adding a profile badge."""
     db.executescript(SCHEMA)
-    if not db.execute("SELECT 1 FROM badge WHERE id = ?", (BADGE,)).fetchone():
-        keys = sorted(BADGE_ROW)
-        db.execute("INSERT INTO badge (%s) VALUES (%s)" % (", ".join(keys), ",".join("?" * len(keys))),
-                   [BADGE_ROW[key] for key in keys])
 
 
 # ------------------------------------------------------------- the rules
