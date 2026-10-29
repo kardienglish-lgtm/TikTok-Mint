@@ -85,8 +85,6 @@ public class SettingsActivity extends Activity {
     private static final String TELEGRAM = "https://t.me/TikTokmintt";
 
     private boolean countriesOpen;
-    private int kardinebiTapCount;
-    private long kardinebiLastTap;
     private boolean accentOpen;
     private Dot accentCustomSwatch;
     private boolean textOpen;
@@ -329,14 +327,6 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
                 new ModDialog.Builder(this, skin).setTitle("О разработчике")
                         .setMessage("TikTok Mint — отдельная модификация.\nРазработчик: @kardinebi.\nВерсия мода " + Version.MOD)
                         .setPositiveButton("Понятно", null).show()));
-        if (isKardinebiUnlocked()) {
-            info.addView(line());
-            info.addView(actionRow("flare", "Секретный знак Кардинеби",
-                    "Открывает описание пасхалки", () -> new ModDialog.Builder(this, skin)
-                    .setTitle("Кардинеби")
-                    .setMessage("супер секретная пасхалочко")
-                    .setPositiveButton("Понятно", null).show()));
-        }
         column.addView(wrap(info));
     }
 
@@ -1550,59 +1540,6 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
         rebuild();
     }
 
-    private boolean isKardinebiUnlocked() {
-        return getSharedPreferences(Kardinebi.PREFS, MODE_PRIVATE)
-                .getBoolean(Badges.KARDINEBI_EASTER_EGG_KEY, false);
-    }
-
-    private void handleKardinebiTap() {
-        long now = android.os.SystemClock.uptimeMillis();
-        if (now - kardinebiLastTap > 1900L) kardinebiTapCount = 0;
-        kardinebiLastTap = now;
-        if (++kardinebiTapCount < 7) return;
-        kardinebiTapCount = 0;
-        if (isKardinebiUnlocked()) return;
-
-        getSharedPreferences(Kardinebi.PREFS, MODE_PRIVATE).edit()
-                .putBoolean(Badges.KARDINEBI_EASTER_EGG_KEY, true).apply();
-        Md3.set(Md3.KEY_FEED, true);
-        Md3.set(Md3.KEY_PROFILE, true);
-        Md3.set(Md3.KEY_INBOX, true);
-        Md3.set(Md3.KEY_ICONS, true);
-        NavBar.setEnabled(true);
-        Fonts.setBold(true);
-        Feed.setEnabled(true); // hide ads
-        Feed.setHides(Feed.KEY_LIVE, true);
-        ModNotifications.set(ModNotifications.REPEATED_REPOSTS, false);
-        Kardinebi.setEnabled(true);
-        Kardinebi.setIso("us");
-        applyKardinebiTheme();
-        Toast.makeText(this, "Пасхалка открыта. Сохраняю значок профиля…", Toast.LENGTH_LONG).show();
-        Mine.unlockEasterEgg((ok, trouble) -> {
-            if (ok) {
-                Toast.makeText(this, "Значок пасхалки сохранён для других пользователей Mint.", Toast.LENGTH_LONG).show();
-            } else if (Mine.PROVE.equals(trouble)) {
-                Toast.makeText(this, "Пасхалка сохранена на этом устройстве. Чтобы другие видели значок, подтверди профиль в разделе значков.", Toast.LENGTH_LONG).show();
-            } else {
-                Toast.makeText(this, "Локальная пасхалка сохранена. Сервер недоступен, синхронизация не подтверждена.", Toast.LENGTH_LONG).show();
-            }
-        });
-        markChanged();
-        rebuild();
-    }
-
-    private void applyKardinebiTheme() {
-        int green = 0xFF38C875;
-        Accent.setCustom(green);
-        Accent.setMaterial(false);
-        Themes.setEnabled(true);
-        Themes.setMaterial(false);
-        boolean dark = Themes.isDark();
-        Themes.setBackground(dark ? 0xFF123D29 : 0xFFE7F7EC);
-        Themes.setText(dark ? 0xFFE7F7EC : 0xFF153D2A);
-        Themes.setStrength(100);
-    }
-
     private View countryHead() {
         String[] current = Kardinebi.current();
         LinearLayout row = row();
@@ -2655,10 +2592,6 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
         list.addView(presetRow(Text.THEME_PRESET_BLUE, 1, dark, panel));
         list.addView(line());
         list.addView(presetRow(Text.THEME_RESET, -1, dark, panel));
-        if (isKardinebiUnlocked()) {
-            list.addView(line());
-            list.addView(presetRow("Кардинеби · секретная тема", 2, dark, panel));
-        }
         panel.view(list);
         panel.quiet(Text.CANCEL, null);
         panel.show();
@@ -2667,8 +2600,8 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
     /** One preset: a two-colour swatch, its name, and a check when it is the scheme in use. */
     private View presetRow(String title, final int which, boolean dark, final Panel panel) {
         LinearLayout row = row();
-        int ground = which == 2 ? 0xFF123D29 : which < 0 ? skin.page : Themes.presetBackground(which, dark);
-        int ink = which == 2 ? 0xFFE7F7EC : Themes.presetText(dark);
+        int ground = which < 0 ? skin.page : Themes.presetBackground(which, dark);
+        int ink = Themes.presetText(dark);
         GradientDrawable swatch = new GradientDrawable();
         swatch.setShape(GradientDrawable.OVAL);
         swatch.setColor(ground);
@@ -2685,8 +2618,7 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
         if (inUse) row.addView(new Check(this, Accent.colour()));
 
         row.setOnClickListener(v -> {
-            if (which == 2) applyKardinebiTheme();
-            else if (which >= 0) Themes.preset(which);
+            if (which >= 0 && which < 2) Themes.preset(which);
             else Themes.reset();
             markChanged();
             panel.close();
@@ -4757,7 +4689,8 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
             logo.setImageDrawable(SettingsGlyph.make("music_note", accentInk()));
             mark.addView(logo, new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER));
         }
-        mark.setOnClickListener(v -> handleKardinebiTap());
+        mark.setClickable(false);
+        mark.setFocusable(false);
         LinearLayout.LayoutParams markLp = new LinearLayout.LayoutParams(dp(44), dp(44));
         markLp.leftMargin = dp(8);
         markLp.rightMargin = dp(11);
