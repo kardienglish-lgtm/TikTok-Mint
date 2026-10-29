@@ -31,7 +31,7 @@ class ProfileShapesSourceTests(unittest.TestCase):
         self.assertIn('ProfileShapes.installCommentBackground(cell)', (JAVA / "Comments.java").read_text(encoding="utf-8"))
         self.assertIn('AccountAppearance.prefs(context).edit().putBoolean(KEY, on).apply()', shapes)
         self.assertIn('"Случайные формы в профилях"', settings)
-        self.assertIn('"Фоновые фигуры в профилях и комментариях"', settings)
+        self.assertIn('"Фигуры Material 3 на фоне профиля"', settings)
         self.assertNotIn('Вращающиеся фигуры', settings)
 
     def test_secondary_accent_has_independent_persistence_and_picker(self):
