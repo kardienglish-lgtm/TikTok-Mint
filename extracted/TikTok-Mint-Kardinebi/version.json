@@ -1,0 +1,8 @@
+{
+  "_comment": "TikTok Mint Custom has no published update endpoint yet. Automatic update checks are disabled until one exists.",
+  "version": "1.1.3-custom",
+  "url": "",
+  "notes": "New Material 3 settings layout and tonal redesigns for search, reposts, comments and profile; custom launcher icon; preserve settings scroll position after toggles.",
+  "notes_ru": "Новая раскладка настроек Material 3, тональный редизайн поиска, репостов, комментариев и профиля, пользовательская иконка и исправлен сброс прокрутки при переключении настроек.",
+  "notes_uk": "Нова розкладка налаштувань Material 3, тональний редизайн пошуку, репостів, коментарів і профілю, власна іконка та виправлено скидання прокрутки після перемикання."
+}
