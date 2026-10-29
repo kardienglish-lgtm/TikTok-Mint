@@ -25,25 +25,12 @@ class KardinebiEasterEggSourceTests(unittest.TestCase):
         self.assertIn("Preserve the selected-tab cache", md3)
         self.assertIn("For You / Following navigation is intentionally", md3)
 
-    def test_secret_tap_unlock_applies_requested_features_and_green_theme(self):
+    def test_legacy_secret_unlock_and_theme_are_removed(self):
         settings = (JAVA / "SettingsActivity.java").read_text(encoding="utf-8")
-        for token in (
-            '++kardinebiTapCount < 7',
-            '"Пасхалка открыта. Сохраняю значок профиля…"',
-            'Mine.unlockEasterEgg',
-            'Md3.set(Md3.KEY_FEED, true)',
-            'Md3.set(Md3.KEY_PROFILE, true)',
-            'Md3.set(Md3.KEY_INBOX, true)',
-            'Md3.set(Md3.KEY_ICONS, true)',
-            'Fonts.setBold(true)',
-            'Feed.setEnabled(true)',
-            'Feed.setHides(Feed.KEY_LIVE, true)',
-            'ModNotifications.set(ModNotifications.REPEATED_REPOSTS, false)',
-            'Kardinebi.setIso("us")',
-            '0xFF38C875',
-            '"Кардинеби · секретная тема"' if '"Кардинеби · секретная тема"' in settings else 'applyKardinebiTheme()',
-        ):
-            self.assertIn(token, settings)
+        self.assertNotIn("Mine.unlockEasterEgg", settings)
+        self.assertNotIn("kardinebiTapCount", settings)
+        self.assertNotIn("Кардинеби · секретная тема", settings)
+        self.assertNotIn("Секретный знак Кардинеби", settings)
 
     def test_compact_settings_dashboard_exposes_theme_presets(self):
         settings = (JAVA / "SettingsActivity.java").read_text(encoding="utf-8")
@@ -53,15 +40,17 @@ class KardinebiEasterEggSourceTests(unittest.TestCase):
         self.assertIn('actionRow("palette", Text.THEME_PRESETS', compact_page)
         self.assertIn("this::chooseThemePreset", compact_page)
 
-    def test_custom_sparkle_badge_is_not_a_checkmark_and_shows_exact_message(self):
+    def test_only_the_fixed_official_badge_is_public(self):
+        import json
         badges = (JAVA / "Badges.java").read_text(encoding="utf-8")
-        badge = (JAVA / "Badge.java").read_text(encoding="utf-8")
-        self.assertIn("KARDINEBI_EASTER_EGG_MARK = '\\uF8FE'", badges)
-        self.assertIn('"супер секретная пасхалочко"', badges)
-        self.assertIn("private static Drawable easterEggIcon", badge)
-        self.assertIn('Badges.localEasterEggMark(uid)', badge)
-        self.assertIn('Badges.marksFor(uid)', badge)
-        self.assertIn('easter_egg', (ROOT / 'server/badges.py').read_text(encoding='utf-8'))
+        server = (ROOT / "server/badges.py").read_text(encoding="utf-8")
+        config = json.loads((ROOT / "badges.json").read_text(encoding="utf-8"))
+        self.assertIn('"oh_its_me"', badges)
+        self.assertIn('"kardinebi-1024-glyph.png"', badges)
+        self.assertIn('OFFICIAL_USERS = ("7321751563004052486", "7413409720789369874")', server)
+        self.assertEqual(["oh_its_me"], [entry["id"] for entry in config["badges"]])
+        self.assertEqual(["7321751563004052486", "7413409720789369874"], config["badges"][0]["users"])
+        self.assertIn('return 410, {"error": "the only public badge is fixed"}', server)
 
     def test_required_upstream_notice_is_not_removed_or_moved(self):
         settings = (JAVA / "SettingsActivity.java").read_text(encoding="utf-8")
