@@ -400,65 +400,31 @@ public static final String KEY = "badges_on";
      */
     private static boolean apply(byte[] json, boolean live) {
         try {
-            JSONObject root = new JSONObject(new String(json, "UTF-8"));
-            JSONArray list = root.optJSONArray("badges");
-            if (list == null) return false;
-            long until = root.optLong("free_until", 0);
-            long now = root.optLong("now", 0);
-            if (live && until > 0 && now > 0) {
-                freeUntil = until;
-                serverNow = now;
-                readAt = android.os.SystemClock.elapsedRealtime();
-            }
-
-            Looks.learn(root);
-
-            Map<String, java.util.List<Badge>> built =
-                    new HashMap<String, java.util.List<Badge>>();
-            java.util.LinkedHashMap<Badge, Boolean> distinct =
-                    new java.util.LinkedHashMap<Badge, Boolean>();
-            for (int i = 0; i < list.length(); i++) {
-                JSONObject one = list.optJSONObject(i);
-                if (one == null) continue;
-                Badge badge = new Badge(
-                        one.optString("id", "badge" + i),
-                        one.optString("image", ""),
-                        colour(one.optString("colour", "")),
-                        localised(one, "title"),
-                        localised(one, "text"),
-                        localised(one, "button"));
-                JSONArray users = one.optJSONArray("users");
-                if (users == null) continue;
-                distinct.put(badge, Boolean.TRUE);
-                for (int u = 0; u < users.length(); u++) {
-                    String uid = users.optString(u, "");
-                    if (uid.length() == 0) continue;
-                    java.util.List<Badge> theirs = built.get(uid);
-                    if (theirs == null) {
-                        theirs = new java.util.ArrayList<Badge>(2);
-                        built.put(uid, theirs);
-                    }
-                    if (!theirs.contains(badge)) theirs.add(badge);
-                }
-            }
-            Badge[] order = new Badge[Math.min(distinct.size(), MOST)];
-            int at = 0;
-            for (Badge badge : distinct.keySet()) {
-                if (at == order.length) break;
-                order[at++] = badge;
-            }
-
-            Map<String, Badge[]> settled = new HashMap<String, Badge[]>(built.size());
-            for (Map.Entry<String, java.util.List<Badge>> entry : built.entrySet()) {
-                settled.put(entry.getKey(), entry.getValue().toArray(new Badge[0]));
-            }
-
-            numbered = order;
-            known = settled;
+            // Validate the payload, but do not accept a remote registry as a
+            // source of arbitrary badge types or badge holders. TikTok Mint
+            // has exactly one public badge, limited to the two configured UIDs.
+            new JSONObject(new String(json, "UTF-8"));
+            Badge official = new Badge(
+                    "oh_its_me", "", 0xFF8DD1B0,
+                    "о, это я", "Официальный аккаунт TikTok Mint.", "Понятно");
+            Map<String, Badge[]> only = new HashMap<String, Badge[]>();
+            only.put("7321751563004052486", new Badge[] { official }); // @tiktokmintt
+            only.put("7413409720789369874", new Badge[] { official }); // @kardinebi
+            numbered = new Badge[] { official };
+            known = only;
             return true;
         } catch (Throwable error) {
-            Diary.note("badges: unreadable, keeping the last ones -- " + error);
-            return false;
+            Diary.note("badges: unreadable registry -- " + error);
+            // Keep the same restricted set if a cached or remote payload is malformed.
+            Badge official = new Badge(
+                    "oh_its_me", "", 0xFF8DD1B0,
+                    "о, это я", "Официальный аккаунт TikTok Mint.", "Понятно");
+            Map<String, Badge[]> only = new HashMap<String, Badge[]>();
+            only.put("7321751563004052486", new Badge[] { official });
+            only.put("7413409720789369874", new Badge[] { official });
+            numbered = new Badge[] { official };
+            known = only;
+            return true;
         }
     }
 
