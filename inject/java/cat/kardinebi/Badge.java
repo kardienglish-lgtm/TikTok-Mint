@@ -453,8 +453,6 @@ public final class Badge {
     /** The badge at a size worth looking at, for the window it opens. */
     private static Drawable large(View view, Badges.Badge badge) {
         try {
-            if ("mint_developer".equals(badge.id)) return developerIcon(view, 96);
-            if ("kardinebi_easter_egg".equals(badge.id)) return easterEggIcon(view, 96);
             Bitmap bitmap = badge.image.length() == 0
                     ? null : Badges.picture(view.getContext(), badge.image);
             Drawable drawable;
@@ -479,18 +477,6 @@ public final class Badge {
 
     /** Sized to the text it sits in, so it matches whatever draws it. */
     private static Drawable picture(TextView view, Badges.Badge badge) {
-        if ("mint_developer".equals(badge.id)) {
-            int px = Math.max(16, Math.round(view.getTextSize()));
-            Drawable icon = developerIcon(view, px);
-            if (icon != null) icon.setBounds(0, 0, px, px);
-            return icon;
-        }
-        if ("kardinebi_easter_egg".equals(badge.id)) {
-            int px = Math.max(16, Math.round(view.getTextSize()));
-            Drawable icon = easterEggIcon(view, px);
-            if (icon != null) icon.setBounds(0, 0, px, px);
-            return icon;
-        }
         Bitmap bitmap = badge.image.length() == 0
                 ? null : Badges.picture(view.getContext(), badge.image);
 
@@ -519,77 +505,6 @@ public final class Badge {
         int across = wide > 0 && tall > 0 ? Math.round(size * (float) wide / tall) : size;
         drawable.setBounds(0, 0, Math.max(1, across), size);
         return drawable;
-    }
-
-    /** Rounded Material You-style verified emblem for the built-in developer badge. */
-    /** A pair of four-point sparks: deliberately not a verification/check mark. */
-    private static Drawable easterEggIcon(View view, int requestedPx) {
-        final int green = 0xFF38C875;
-        return new Drawable() {
-            private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            @Override public void draw(Canvas canvas) {
-                android.graphics.Rect bounds = getBounds();
-                float w = Math.max(1, bounds.width());
-                float h = Math.max(1, bounds.height());
-                canvas.save();
-                canvas.translate(bounds.left, bounds.top);
-                canvas.scale(w / 100f, h / 100f);
-                paint.setStyle(Paint.Style.FILL);
-                paint.setColor(green);
-                Path big = sparkle(43f, 45f, 34f, 9f);
-                canvas.drawPath(big, paint);
-                paint.setColor(0xFFFFD166);
-                canvas.drawPath(sparkle(73f, 23f, 17f, 5f), paint);
-                paint.setColor(green);
-                canvas.drawCircle(73f, 76f, 5f, paint);
-                canvas.restore();
-            }
-            private Path sparkle(float cx, float cy, float outer, float inner) {
-                Path path = new Path();
-                path.moveTo(cx, cy - outer);
-                path.quadTo(cx + inner * 0.38f, cy - inner * 0.38f, cx + outer, cy);
-                path.quadTo(cx + inner * 0.38f, cy + inner * 0.38f, cx, cy + outer);
-                path.quadTo(cx - inner * 0.38f, cy + inner * 0.38f, cx - outer, cy);
-                path.quadTo(cx - inner * 0.38f, cy - inner * 0.38f, cx, cy - outer);
-                path.close();
-                return path;
-            }
-            @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); }
-            @Override public void setColorFilter(android.graphics.ColorFilter filter) { paint.setColorFilter(filter); }
-            @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
-        };
-    }
-
-    private static Drawable developerIcon(View view, int requestedPx) {
-        try {
-            int px = Math.max(24, requestedPx);
-            Bitmap bitmap = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-            float scale = px / 48f;
-            canvas.save();
-            canvas.scale(scale, scale);
-
-            Paint background = new Paint(Paint.ANTI_ALIAS_FLAG);
-            int accent = Accent.colour();
-            background.setColor(accent == Color.TRANSPARENT ? 0xFF6750A4 : accent);
-            canvas.drawRoundRect(new RectF(1.5f, 1.5f, 46.5f, 46.5f), 15f, 15f, background);
-
-            Paint check = new Paint(Paint.ANTI_ALIAS_FLAG);
-            check.setColor(Color.WHITE);
-            check.setStyle(Paint.Style.STROKE);
-            check.setStrokeWidth(4.2f);
-            check.setStrokeCap(Paint.Cap.ROUND);
-            check.setStrokeJoin(Paint.Join.ROUND);
-            Path path = new Path();
-            path.moveTo(13.3f, 24.6f);
-            path.lineTo(20.3f, 31.1f);
-            path.lineTo(34.7f, 16.8f);
-            canvas.drawPath(path, check);
-            canvas.restore();
-            return new BitmapDrawable(view.getResources(), bitmap);
-        } catch (Throwable ignored) {
-            return null;
-        }
     }
 
     /** The note that ships with the mod, decoded once. */
