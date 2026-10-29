@@ -1280,13 +1280,7 @@ class Handler(BaseHTTPRequestHandler):
             self.answer(200, {"plugins": []})
             return
         if path.startswith("/picture/"):
-            name = os.path.basename(path[len("/picture/"):])
-            file = os.path.join(ICONS, name)
-            if not os.path.isfile(file):
-                self.answer(404, {"error": "no such picture"})
-                return
-            with open(file, "rb") as handle:
-                self.answer(200, None, "image/png", handle.read())
+            self.answer(404, {"error": "plugins disabled"})
             return
         if path == "/badges":
             data = json.dumps(public(), ensure_ascii=False).encode("utf-8")
