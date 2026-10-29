@@ -55,9 +55,7 @@ public final class Comments {
     public static void mark(View cell) {
         if (cell == null) return;
         cell.setTag(0x5454434D, Boolean.TRUE);
-        // The geometry belongs to the comment list's background, never to each
-        // recycled comment row. This leaves native text, avatars and reactions alone.
-        ProfileShapes.installCommentBackground(cell);
+        // Keep comment rows and the comment list in TikTok's native visual style.
     }
 
     /** Only lookups inside TikTok's native comment cell are routed here. */
