@@ -3,7 +3,7 @@
   "_fields": {
     "id": "unique badge id",
     "users": "TikTok numeric user IDs",
-    "image": "empty uses the built-in Mint badge mark",
+    "image": "image basename served from server/icons; the official badge uses kardinebi-1024-glyph.png",
     "title": "popup heading",
     "text": "popup body",
     "button": "popup button label"
