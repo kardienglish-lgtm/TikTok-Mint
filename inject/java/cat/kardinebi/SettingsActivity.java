@@ -80,7 +80,7 @@ public class SettingsActivity extends Activity {
      */
     private static boolean pending;
 
-    private static final String GIT = "https://github.com/kardinebi/TikTok-Mint";
+    private static final String GIT = "https://github.com/kardienglish-lgtm/TikTok-Mint";
     /** The mod's Telegram channel. */
     private static final String TELEGRAM = "https://t.me/TikTokmintt";
 
@@ -241,7 +241,7 @@ public class SettingsActivity extends Activity {
         }));
         shapes.addView(quiet("Тонкие геометрические фигуры медленно вращаются за содержимым профилей и списка комментариев. Анимация отключается вместе с системными анимациями."));
         shapes.addView(line());
-        shapes.addView(toggleRow("auto_awesome", "Фоновые фигуры в профилях и комментариях", ProfileShapes.enabled(), on -> {
+        shapes.addView(toggleRow("auto_awesome", "Фигуры Material 3 на фоне профиля", ProfileShapes.enabled(), on -> {
             ProfileShapes.setEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
         }));
         shapes.addView(line());
