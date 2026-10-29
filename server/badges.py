@@ -847,22 +847,8 @@ def digest_of(name):
 
 
 def plugins():
-    """Everything the store offers, newest first.
-
-    Each entry carries the hash of its file: the phone checks what it was
-    handed against it before it lets the plugin anywhere near the app.
-    """
-    db = connect()
-    rows = db.execute(
-        "SELECT id, name, version, author, about, tiktok, file, icon, size"
-        " FROM plugin ORDER BY added DESC").fetchall()
-    db.close()
-    return {"plugins": [
-        {"id": r[0], "name": r[1], "version": r[2], "author": r[3], "about": r[4],
-         "tiktok": r[5], "url": "/plugin/" + r[6], "icon": ("/picture/" + r[7])
-         if r[7] else "", "size": r[8], "sha256": digest_of(r[6])}
-        for r in rows]}
-
+    """The plugin catalog has been retired."""
+    return {"plugins": []}
 
 def take_plugin(raw, name):
     """Read a packed plugin, keep it, and remember what its manifest says.
@@ -1247,83 +1233,15 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/admin/badge/new":
-            # a form with a file in it is read whole rather than as a query
-            # string, so the picture arrives the same way a plugin does
-            try:
-                form = cgi.FieldStorage(
-                    fp=self.rfile, headers=self.headers,
-                    environ={"REQUEST_METHOD": "POST",
-                             "CONTENT_TYPE": self.headers.get("Content-Type", "")})
-            except Exception as trouble:
-                self.go("/admin?said=не вышло: %s" % trouble)
-                return
-
-            def field(name):
-                try:
-                    return (form.getfirst(name) or "").strip()
-                except Exception:
-                    return ""
-
-            which = field("id")
-            if not named(which):
-                self.go("/admin?said=id: буквы, цифры, точка, дефис")
-                return
-
-            picture = ""
-            try:
-                item = form["picture"]
-                raw = item.file.read() if item.filename else b""
-            except Exception:
-                raw = b""
-            if raw:
-                picture = which + ".png"
-                with open(os.path.join(ICONS, picture), "wb") as handle:
-                    handle.write(raw)
-
-            # the name heads the popup, the text is the sentence under it.
-            # Every badge was called "TikTok Mint" because of this line
-            db = connect()
-            db.execute(
-                "INSERT INTO badge (id, colour, image, title, title_ru, title_uk,"
-                " text, text_ru, text_uk, button) VALUES (?,?,?,?,?,?,?,?,?,?)"
-                " ON CONFLICT(id) DO UPDATE SET colour=excluded.colour,"
-                " image=excluded.image, title=excluded.title,"
-                " title_ru=excluded.title_ru, title_uk=excluded.title_uk,"
-                " text=excluded.text, text_ru=excluded.text_ru,"
-                " text_uk=excluded.text_uk",
-                (which, field("colour").lstrip("#"), picture,
-                 field("title") or which, field("title_ru"), field("title_uk"),
-                 field("text"), field("text_ru"), field("text_uk"), "Got it"))
-            db.commit()
-            db.close()
-            self.go("/admin?said=значок %s готов" % which)
+            self.go("/admin?said=доступен только закреплённый бейдж «о, это я»")
             return
 
         if path == "/admin/badge/give":
-            said = self.form()
-            which = said.get("id", "")
-            given = 0
-            db = connect()
-            if db.execute("SELECT 1 FROM badge WHERE id = ?", (which,)).fetchone():
-                now = int(time.time())
-                for uid in (said.get("uids") or "").replace(",", " ").split():
-                    if sane(uid):
-                        db.execute("INSERT OR IGNORE INTO held (uid, badge, given_at)"
-                                   " VALUES (?, ?, ?)", (uid, which, now))
-                        given += 1
-                db.commit()
-            db.close()
-            self.go("/admin/badge?id=%s" % which)
+            self.go("/admin?said=бейдж закреплён за двумя официальными аккаунтами")
             return
 
         if path == "/admin/badge/take":
-            said = self.form()
-            db = connect()
-            db.execute("DELETE FROM held WHERE uid = ? AND badge = ?",
-                       (said.get("uid", ""), said.get("id", "")))
-            db.commit()
-            db.close()
-            self.go("/admin/badge?id=%s" % said.get("id", ""))
+            self.go("/admin?said=снять закреплённый бейдж нельзя")
             return
 
         if path == "/admin/gradient/drop":
@@ -1344,16 +1262,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/admin/plugin/add":
-            try:
-                form = cgi.FieldStorage(
-                    fp=self.rfile, headers=self.headers,
-                    environ={"REQUEST_METHOD": "POST",
-                             "CONTENT_TYPE": self.headers.get("Content-Type", "")})
-                item = form["file"]
-                which = take_plugin(item.file.read(), item.filename or "plugin.mtp")
-                self.go("/admin?said=плагин %s в магазине" % which)
-            except Exception as trouble:
-                self.go("/admin?said=не вышло: %s" % trouble)
+            self.go("/admin?said=загрузка плагинов отключена в этой сборке")
             return
 
         self.answer(404, {"error": "no such page"})
@@ -1365,16 +1274,10 @@ class Handler(BaseHTTPRequestHandler):
             self.panel_get(path, parse_qs(parts.query))
             return
         if path.startswith("/plugin/"):
-            name = os.path.basename(path[len("/plugin/"):])
-            file = os.path.join(PLUGINS, name)
-            if not name.endswith(".mtp") or not os.path.isfile(file):
-                self.answer(404, {"error": "no such plugin"})
-                return
-            with open(file, "rb") as handle:
-                self.answer(200, None, "application/octet-stream", handle.read())
+            self.answer(404, {"error": "plugins disabled"})
             return
         if path == "/plugins":
-            self.answer(200, plugins())
+            self.answer(200, {"plugins": []})
             return
         if path.startswith("/picture/"):
             name = os.path.basename(path[len("/picture/"):])
