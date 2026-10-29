@@ -315,49 +315,12 @@ public final class Plugins {
     }
 
     private static boolean start(Context context, Live live) {
-        Info info = live.info;
-        try {
-            File dex = new File(info.folder, DEX);
-            if (!dex.isFile()) {
-                info.trouble = "no " + DEX + " in the plugin";
-                return false;
-            }
-            PluginAudit.Report inspection=PluginAudit.folder(info.folder);
-            info.safety=inspection.summary();
-            // Android 14 refuses to load a dex anyone could still write to
-            if (dex.canWrite()) dex.setReadOnly();
-
-            ClassLoader loader = new DexClassLoader(
-                    dex.getAbsolutePath(),
-                    context.getCodeCacheDir().getAbsolutePath(),
-                    null,
-                    Plugins.class.getClassLoader());
-
-            Class<?> type = loader.loadClass(info.entry);
-            Object made = type.getDeclaredConstructor().newInstance();
-            if (!(made instanceof KardinebiPlugin)) {
-                info.trouble = info.entry + " does not extend KardinebiPlugin";
-                return false;
-            }
-            KardinebiPlugin plugin = (KardinebiPlugin) made;
-            plugin.attach(new PluginContext(context.getApplicationContext(), info.id,
-                    info.folder, new PluginContext.Diarist() {
-                @Override
-                public void note(String line) {
-                    Diary.note(line);
-                }
-            }));
-            plugin.onStart(context);
-            claim(info);
-            live.instance = plugin;
-            live.settings = plugin;
-            info.trouble = null;
-            return true;
-        } catch (Throwable error) {
-            info.trouble = String.valueOf(error);
-            Diary.note("plugin " + info.id + " would not start: " + error);
-            return false;
+        // Plugin bytecode is no longer loaded or executed by TikTok Mint.
+        if (live != null && live.instance != null) {
+            try { live.instance.onStop(); } catch (Throwable ignored) { }
+            live.instance = null;
         }
+        return false;
     }
 
     /** The running set, as an array the hot hooks can walk without locking. */
