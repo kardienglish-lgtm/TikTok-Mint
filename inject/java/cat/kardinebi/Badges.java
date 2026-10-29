@@ -143,12 +143,8 @@ public static final String KEY = "badges_on";
     static final char DEVELOPER_MARK = '\uF8FF';
     static final char KARDINEBI_EASTER_EGG_MARK = '\uF8FE';
     static final String KARDINEBI_EASTER_EGG_KEY = "kardinebi_easter_egg";
-    private static final Badge DEVELOPER_BADGE = new Badge(
-            "mint_developer", "", 0xFF9B6DFF,
-            "TikTok Mint", "@kardineb — разработчик мода TikTok Mint.", "Понятно");
-    private static final Badge KARDINEBI_EASTER_EGG_BADGE = new Badge(
-            "kardinebi_easter_egg", "", 0xFF38C875,
-            "Кардинеби", "супер секретная пасхалочко", "Понятно");
+    // Legacy local marks stay reserved only so old profile text is stripped;
+    // they no longer map to a badge or picture.
 
     private static final int MOST = 64;
     private static final char FIRST = pick();
