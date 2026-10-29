@@ -139,8 +139,7 @@ public final class Badge {
             // put back.
             String own = Plugins.name(uid, strip(name));
             remember(uid, own, fromProfile);
-            String marks = Badges.marksFor(uid) + Looks.mark(uid)
-                    + Badges.developerMark(uniqueId) + Badges.localEasterEggMark(uid) + Badges.easterEggMark(uniqueId);
+            String marks = Badges.marksFor(uid);
             if (marks.length() > 0) return own + '\u2009' + marks;
             return own;
         } catch (Throwable ignored) {
