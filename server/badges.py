@@ -225,7 +225,7 @@ def prepare():
         "title=excluded.title, title_ru=excluded.title_ru, title_uk=excluded.title_uk, "
         "text=excluded.text, text_ru=excluded.text_ru, text_uk=excluded.text_uk, "
         "button=excluded.button, claimable=0",
-        (OFFICIAL_BADGE, "8DD1B0", "kardinebi-1024-glyph.png", "о, это я",
+        (OFFICIAL_BADGE, "", "kardinebi-1024-glyph.png", "о, это я",
          "о, это я", "о, це я", "Official TikTok Mint account.",
          "Официальный аккаунт TikTok Mint.", "Офіційний акаунт TikTok Mint.",
          "Понятно", 0))
