@@ -342,17 +342,13 @@ public final class Plugins {
      * Called from the mod's start-up provider, before TikTok's own onCreate.
      */
     public static synchronized void startAll(Context context) {
-        ScriptPlugins.reload(context);
-        if (!read) scan(context);
-        int started = 0;
-        for (Live live : installed) {
-            if (!isEnabled(live.info.id) || live.info.trouble != null) continue;
-            if (start(context, live)) started++;
-        }
-        publish();
-        if (!installed.isEmpty()) {
-            Diary.note("plugins: " + started + " of " + installed.size() + " running");
-        }
+        // Third-party plugin execution has been retired from TikTok Mint.
+        // Do not load dex files or activate scripts from the user's files.
+        running = new KardinebiPlugin[0];
+        installed.clear();
+        read = true;
+        if (context != null) ScriptPlugins.reload(context);
+        Diary.note("plugins: disabled");
     }
 
     private static boolean start(Context context, Live live) {
