@@ -359,7 +359,7 @@ def public():
     badges = {}
     for row in db.execute(
             "SELECT id, colour, image, title, text, text_ru, text_uk, button,"
-            " title_ru, title_uk FROM badge"):
+            " title_ru, title_uk FROM badge WHERE id = ?", (OFFICIAL_BADGE,)):
         badges[row[0]] = {
             "id": row[0], "colour": row[1], "image": stamped(row[2]), "title": row[3],
             "text": row[4], "text_ru": row[5], "text_uk": row[6], "button": row[7],
@@ -792,33 +792,8 @@ def dep_play(body, ip):
 
 
 def free(body, ip):
-    """The badge anybody running the mod before the day gets, and nothing else.
-
-    The badge is named here and not by the caller. A request cannot ask for
-    `owner` because nothing it sends is used to choose which badge it gets.
-    """
-    now = int(time.time())
-    if now >= FREE_UNTIL:
-        return 410, {"error": "that one is over"}
-
-    db = connect()
-    uid = vouched(db, body)
-    if not uid:
-        db.close()
-        return 403, {"error": "prove"}
-
-    wait = too_soon(db, uid, ip)
-    if wait:
-        db.close()
-        return 429, {"error": "too often", "wait": wait}
-
-    db.execute("INSERT OR IGNORE INTO held (uid, badge, given_at) VALUES (?, ?, ?)",
-               (uid, FREE, now))
-    wrote(db, uid, ip)
-    db.commit()
-    out = mine(uid)
-    db.close()
-    return 200, {"badges": out}
+    """Retired: TikTok Mint now has one fixed public badge."""
+    return 410, {"error": "the only public badge is fixed"}
 
 
 def sane(uid):
