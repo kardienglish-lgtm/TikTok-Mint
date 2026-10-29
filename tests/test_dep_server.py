@@ -46,11 +46,11 @@ class DepServerTests(unittest.TestCase):
         self.assertEqual(dep.settles([9, 8, 7], [9, 8]), 0)     # over
         self.assertEqual(dep.settles([9, 8], [9, 7, 8]), 4)     # the dealer over
 
-    def test_the_badge_is_put_in_the_table_once(self):
+    def test_calculator_prize_is_not_added_to_the_profile_badge_registry(self):
         db = table()
         dep.prepare(db)
-        rows = db.execute("SELECT colour, title_ru FROM badge WHERE id = ?", (dep.BADGE,)).fetchall()
-        self.assertEqual(rows, [("7B4A1E", "Калькуляторщик")])
+        rows = db.execute("SELECT id FROM badge WHERE id = ?", (dep.BADGE,)).fetchall()
+        self.assertEqual(rows, [])
 
     def test_an_account_starts_with_a_thousand_and_is_given_more_each_day(self):
         db = table()
