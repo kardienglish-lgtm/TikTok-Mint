@@ -218,70 +218,6 @@ public final class Mine {
         return false;
     }
 
-    /** Take the badge that is free until the day it is not. */
-    public static void takeFree(final Said then) {
-        final String uid = Account.id();
-        final String token = token();
-        if (uid == null || token.length() == 0) {
-            if (then != null) then.said(false, PROVE);
-            return;
-        }
-        Net.away("badges: free", new Runnable() {
-            @Override
-            public void run() {
-                boolean ok = false;
-                String trouble = "";
-                try {
-                    Net.Said said = Net.talk(Badges.SERVER + "/old",
-                            new JSONObject().put("uid", uid).put("token", token)
-                                    .toString());
-                    if (said.ok()) {
-                        read(new JSONObject(said.body));
-                        ok = true;
-                    } else if (asksForProof(said)) {
-                        trouble = PROVE;
-                    }
-                } catch (Throwable error) {
-                    Diary.note("badges: free -- " + error);
-                }
-                answer(then, ok, trouble);
-            }
-        });
-    }
-
-    /** Claim the secret badge on the server so other Mint users can see it too. */
-    public static void unlockEasterEgg(final Said then) {
-        final String uid = Account.id();
-        final String token = token();
-        if (uid == null || uid.length() == 0 || token.length() == 0) {
-            answer(then, false, PROVE);
-            return;
-        }
-        Net.away("badges: easter egg", new Runnable() {
-            @Override public void run() {
-                boolean ok = false;
-                String trouble = "server";
-                try {
-                    Net.Said said = Net.talk(Badges.SERVER + "/easter-egg",
-                            new JSONObject().put("uid", uid).put("token", token).toString());
-                    if (said.ok()) {
-                        read(new JSONObject(said.body));
-                        asked = true; fresh = true; ok = true; trouble = "";
-                        Badges.refresh();
-                    } else if (asksForProof(said)) {
-                        trouble = PROVE;
-                    } else {
-                        trouble = "http:" + said.code;
-                    }
-                } catch (Throwable error) {
-                    trouble = String.valueOf(error);
-                    Diary.note("badges: easter egg -- " + error);
-                }
-                answer(then, ok, trouble);
-            }
-        });
-    }
-
     public interface Said {
         void said(boolean ok, String trouble);
     }
@@ -294,14 +230,6 @@ public final class Mine {
                 then.said(ok, trouble);
             }
         });
-    }
-
-    /** Whether this account already has the free one. */
-    public static boolean hasFree() {
-        for (Held one : held) {
-            if ("old".equals(one.id)) return true;
-        }
-        return false;
     }
 
     private static SharedPreferences prefs() {
