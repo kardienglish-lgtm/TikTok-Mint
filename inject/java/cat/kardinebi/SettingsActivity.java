@@ -485,7 +485,7 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
         }
 
         if (settingsGroup == 0) {
-            if (Badges.freeStillOpen() && !Mine.hasFree()) column.addView(freeBanner());
+            // Legacy free badge offers are retired; the only public badge is account-fixed.
             column.addView(m3Groups());
             licenceSection();
             column.addView(versions());
