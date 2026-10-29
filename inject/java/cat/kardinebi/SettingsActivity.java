@@ -191,6 +191,9 @@ public class SettingsActivity extends Activity {
         LinearLayout project = card();
         project.addView(actionRow("code", "TikTok Mint",
                 "Открыть Telegram-канал · @TikTokmintt", () -> open(TELEGRAM)));
+        project.addView(line());
+        project.addView(actionRow("code", "Открытый код на GitHub",
+                "Посмотреть исходники TikTok Mint", () -> open("https://github.com/kardienglish-lgtm/TikTok-Mint")));
         column.addView(wrap(project));
 
         column.addView(section("Цвет и навигация"));
