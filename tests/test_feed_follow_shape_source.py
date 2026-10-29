@@ -1,4 +1,4 @@
-"""Regression checks for the Material 3 recommendation follow affordance and settings shortcuts."""
+"""Regression checks that recommendation cards retain TikTok native styling."""
 from pathlib import Path
 import unittest
 
@@ -31,15 +31,9 @@ class FeedFollowShapeSourceTests(unittest.TestCase):
         self.assertIn('target.getVisibility() != View.VISIBLE', target)
         self.assertNotIn('!target.isEnabled()', target)  # native view may draw while disabled
 
-    def test_follow_shape_animates_to_random_expressive_shape_and_fades(self):
-        follow = (JAVA / "FeedFollowShape.java").read_text(encoding="utf-8")
-        for token in (
-            "Expressive.CLOVER4", "Expressive.COOKIE9", "Expressive.FLOWER6",
-            "Expressive.BURST12", "morphToSuccess()", "rotationBy(250f)",
-            "target.animate().alpha(0f)", "Color.WHITE", "cx - radius * 0.07f",
-            "view.getTag(STATE_TAG) == observed",
-        ):
-            self.assertIn(token, follow)
+    def test_recommendation_feed_material_shape_is_disabled(self):
+        md3 = (JAVA / "Md3.java").read_text(encoding="utf-8")
+        self.assertIn("static boolean followShapeEnabled() {\n        return false;\n    }", md3)
 
     def test_settings_header_has_a_top_right_local_logs_action(self):
         settings = (JAVA / "SettingsActivity.java").read_text(encoding="utf-8")
