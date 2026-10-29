@@ -35,7 +35,12 @@ public final class ScriptPlugins {
   }
   return new Program(j);
  }
- static synchronized void reload(Context c){List<Program> out=new ArrayList<>();Map<String,?> all=c.getSharedPreferences(STORE,0).getAll();List<String> keys=new ArrayList<>(all.keySet());Collections.sort(keys);for(String k:keys)if(k.startsWith("source:")&&out.size()<16&&c.getSharedPreferences(STORE,0).getBoolean("on:"+k.substring(7),false))try{out.add(check((String)all.get(k)));}catch(Exception e){Diary.note("script rejected: "+k);}active=out.toArray(new Program[0]);Accent.reload();}
+ static synchronized void reload(Context c){
+  // User-installed command plugins have been retired alongside dex plugins.
+  // An empty active list also keeps old saved definitions inert after upgrade.
+  active=new Program[0];
+  Accent.reload();
+ }
  static synchronized void save(Context c,String raw,boolean enabled)throws Exception{Program p=check(raw);android.content.SharedPreferences prefs=c.getSharedPreferences(STORE,0);int n=0;for(String k:prefs.getAll().keySet())if(k.startsWith("source:"))n++;if(!prefs.contains("source:"+p.id)&&n>=16)throw new Exception(Local.of("Не больше 16 плагинов"));prefs.edit().putString("source:"+p.id,p.source.toString()).putBoolean("on:"+p.id,enabled).apply();reload(c);}
  public static String name(String uid,String value){for(Program p:active){String v=p.names.get(uid);if(v!=null)value=v;}return value;}
  public static int colour(int value){for(Program p:active)for(int i=0;i<p.colourFrom.length;i++)if(p.colourFrom[i]==value){value=p.colourTo[i];break;}return value;}
