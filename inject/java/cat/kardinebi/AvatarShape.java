@@ -48,10 +48,9 @@ public final class AvatarShape {
     private static volatile boolean profileVisibleCached;
 
     static boolean randomProfilesEnabled() {
-        Context context = Kardinebi.context();
-        if (context == null) return false;
-        try { return AccountAppearance.prefs(context).getBoolean(RANDOM_PROFILE_KEY, false); }
-        catch (Throwable ignored) { return false; }
+        // Profile and comment Material styling is retired. The profile backdrop
+        // has its own independent, configurable geometry through ProfileShapes.
+        return false;
     }
 
     static void setRandomProfilesEnabled(Context context, boolean enabled) {
@@ -125,18 +124,10 @@ public final class AvatarShape {
     }
 
     private static int index() {
-        int known = chosen;
-        if (known >= 0) return known;
-        Context context = Kardinebi.context();
-        if (context == null) return 0;  // too early to know; a circle, and ask again
-        int found = 0;
-        try {
-            SharedPreferences prefs = context.getSharedPreferences(Kardinebi.PREFS, Context.MODE_PRIVATE);
-            String name = prefs.getString(KEY, ALL[0]);
-            for (int i = 0; i < ALL.length; i++) if (ALL[i].equals(name)) found = i;
-        } catch (Throwable ignored) { }
-        chosen = found;
-        return found;
+        // Preserve TikTok's native circular avatar masks. Configurable M3 shapes
+        // are used only by the decorative profile backdrop, never by avatars.
+        chosen = 0;
+        return 0;
     }
 
     /** What the image loader calls where it used to add a circle to its path. */
