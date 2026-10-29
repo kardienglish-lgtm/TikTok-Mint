@@ -245,6 +245,9 @@ public class SettingsActivity extends Activity {
             ProfileShapes.setEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
         }));
         shapes.addView(line());
+        shapes.addView(actionRow("shapes", "Настроить фигуры фона",
+                "Тип, цвет, размер, обводка и живой предпросмотр", this::chooseProfileShapes));
+        shapes.addView(line());
         shapes.addView(toggleRow("favorite", Text.MD3_ICONS, Md3.isOn(Md3.KEY_ICONS), on -> Md3.set(Md3.KEY_ICONS, on)));
         shapes.addView(quiet("Изменения применяются к совместимым элементам TikTok 47.4.42."));
         column.addView(wrap(shapes));
@@ -540,6 +543,9 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
         loading.addView(toggleRow("auto_awesome", "Фоновые фигуры в профилях и комментариях", ProfileShapes.enabled(), on -> {
             ProfileShapes.setEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
         }));
+        loading.addView(line());
+        loading.addView(actionRow("shapes", "Настроить фигуры фона",
+                "Тип, цвет, размер, обводка и живой предпросмотр", this::chooseProfileShapes));
         loading.addView(line());
         loading.addView(toggleRow("view_compact", Text.NEW_PROFILE, Flags.isOn(Flags.KEY_NEW_PROFILE),
                 on -> Flags.set(Flags.KEY_NEW_PROFILE, on)));
@@ -3677,6 +3683,101 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
                 rebuildAfterSwitchAnimation();
             }
         }));
+    }
+
+    /** Live editor for the decorative figures behind the profile. */
+    private void chooseProfileShapes() {
+        showSettingsDialog("Фигуры на фоне профиля", profileShapesContent());
+    }
+
+    private View profileShapesContent() {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(12), dp(6), dp(12), dp(8));
+
+        content.addView(label("Предпросмотр"));
+        content.addView(ProfileShapes.preview(this), new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(176)));
+        content.addView(line());
+
+        content.addView(label("Тип фигуры"));
+        android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this);
+        scroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout choices = new LinearLayout(this);
+        choices.setOrientation(LinearLayout.HORIZONTAL);
+        for (int i = -1; i < AvatarShape.ALL.length; i++) {
+            final int type = i;
+            String name = type < 0 ? "Разные" : AvatarShape.ALL[type];
+            Bitmap art = AvatarShape.picture(type < 0 ? "squircle" : name, dp(36), Accent.colour());
+            boolean selected = ProfileShapes.shapeType(this) == type;
+            LinearLayout tile = Panel.tile(this, skin, art,
+                    selected ? Accent.colour() : skin.text,
+                    type < 0 ? "Разные M3" : AvatarShape.nameOf(name), selected);
+            Motion.press(tile);
+            tile.setOnClickListener(v -> {
+                ProfileShapes.setShapeType(this, type);
+                markChanged();
+                showSettingsDialog("Фигуры на фоне профиля", profileShapesContent());
+            });
+            LinearLayout.LayoutParams tileLp = new LinearLayout.LayoutParams(dp(94), dp(90));
+            tileLp.setMargins(dp(3), dp(5), dp(3), dp(5));
+            choices.addView(tile, tileLp);
+        }
+        scroll.addView(choices);
+        content.addView(scroll);
+        content.addView(line());
+
+        int selectedColour = ProfileShapes.shapeColour(this);
+        content.addView(actionRow("palette", "Цвет фигур",
+                selectedColour == 0 ? "Цвета основной и дополнительной темы"
+                        : String.format(Locale.US, "#%06X", selectedColour & 0xFFFFFF),
+                this::chooseProfileShapeColour));
+        content.addView(line());
+
+        content.addView(liveSlider("auto_awesome", "Размер фигур",
+                ProfileShapes.shapeSize(this) - 40, 140, 40, "%",
+                value -> { ProfileShapes.setShapeSize(this, value + 40); markChanged(); }));
+        content.addView(line());
+        content.addView(liveSlider("palette", "Толщина обводки",
+                ProfileShapes.shapeStroke(this), 40, 0, " × 0,1 dp",
+                value -> { ProfileShapes.setShapeStroke(this, value); markChanged(); }));
+        content.addView(line());
+        content.addView(actionRow("restore", "Сбросить настройки фигур",
+                "Вернуть цвета темы и исходную композицию",
+                () -> {
+                    ProfileShapes.resetCustomisation(this);
+                    markChanged();
+                    showSettingsDialog("Фигуры на фоне профиля", profileShapesContent());
+                }));
+        return content;
+    }
+
+    private void chooseProfileShapeColour() {
+        final int previous = ProfileShapes.shapeColour(this);
+        final int initial = previous == 0 ? Accent.colour() : previous;
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(20), dp(8), dp(20), dp(8));
+        final AccentColourPicker picker = new AccentColourPicker(this, initial);
+        final View sample = new View(this);
+        LinearLayout.LayoutParams sampleParams = new LinearLayout.LayoutParams(dp(72), dp(34));
+        sampleParams.gravity = Gravity.CENTER_HORIZONTAL;
+        sample.setBackgroundColor(initial);
+        content.addView(sample, sampleParams);
+        content.addView(picker, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(238)));
+        picker.onColourChanged(colour -> {
+            sample.setBackgroundColor(colour);
+            ProfileShapes.setShapeColour(this, colour);
+        });
+        new ModDialog.Builder(this, skin).setTitle("Цвет фигур")
+                .setView(content)
+                .setNegativeButton(android.R.string.cancel, (dialog, which) ->
+                        ProfileShapes.setShapeColour(this, previous))
+                .setPositiveButton("Применить", (dialog, which) -> {
+                    ProfileShapes.setShapeColour(this, picker.colour());
+                    markChanged();
+                }).show();
     }
 
     /** Every shape as a picture of itself, four to a row. */
