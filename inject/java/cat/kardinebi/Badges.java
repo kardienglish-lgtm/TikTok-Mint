@@ -211,7 +211,8 @@ public static final String KEY = "badges_on";
 
     /** Whether a character is one of ours, without looking anything up. */
     public static boolean isMark(char c) {
-        return c >= FIRST && c < FIRST + MOST;
+        // Strip old reserved marks and any stale third-party badge marks too.
+        return isPrivate(c);
     }
 
     /**
