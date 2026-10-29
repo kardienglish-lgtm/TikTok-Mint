@@ -374,7 +374,7 @@ public static final String KEY = "badges_on";
             // has exactly one public badge, limited to the two configured UIDs.
             new JSONObject(new String(json, "UTF-8"));
             Badge official = new Badge(
-                    "oh_its_me", "kardinebi-1024-glyph.png", 0xFF8DD1B0,
+                    "oh_its_me", "kardinebi-1024-glyph.png", 0,
                     "о, это я", "Официальный аккаунт TikTok Mint.", "Понятно");
             Map<String, Badge[]> only = new HashMap<String, Badge[]>();
             only.put("7321751563004052486", new Badge[] { official }); // @tiktokmintt
