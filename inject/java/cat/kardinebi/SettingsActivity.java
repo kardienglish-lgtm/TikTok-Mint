@@ -1089,12 +1089,6 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
     private java.util.List<Integer> gradientColours;
     private int gradientSlot;
 
-    private void tookFree(boolean ok, String trouble) {
-        if (needsProof(ok, trouble)) return;
-        Screen.say(ok ? Text.FREE_BADGE_GOT : Text.MINE_TOO_OFTEN);
-        rebuild();
-    }
-
     /**
      * Whether this account has proved it is anybody's, and the way to do it.
      *
@@ -1847,68 +1841,6 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
             view.setColorFilter(badge.colour, android.graphics.PorterDuff.Mode.SRC_IN);
         }
         return view;
-    }
-
-    /** The one that is free until it is not. */
-    private View freeBanner() {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(18), dp(16), dp(18), dp(16));
-
-        GradientDrawable background = new GradientDrawable();
-        background.setCornerRadius(Math.max(skin.radius, dp(MintGeometry.CARD_DP)));
-        background.setColor(blend(0xFF40E0D0, skin.card, 0.82f));
-        card.setBackground(background);
-
-        TextView head = new TextView(this);
-        head.setText(Text.FREE_BADGE);
-        head.setTextColor(skin.text);
-        head.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
-        head.setTypeface(Typeface.DEFAULT_BOLD);
-        card.addView(head);
-
-        TextView body = new TextView(this);
-        body.setText(Text.FREE_BADGE_TEXT);
-        body.setTextColor(skin.text);
-        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        body.setPadding(0, dp(4), 0, 0);
-        card.addView(body);
-
-        TextView take = new TextView(this);
-        take.setText(Text.FREE_BADGE_TAKE);
-        take.setTextColor(0xFF10221F);
-        take.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        take.setTypeface(Typeface.DEFAULT_BOLD);
-        take.setGravity(Gravity.CENTER);
-        take.setPadding(0, dp(11), 0, dp(11));
-        GradientDrawable pill = new GradientDrawable();
-        pill.setColor(0xFF40E0D0);
-        pill.setCornerRadius(dp(14));
-        take.setBackground(pill);
-        LinearLayout.LayoutParams below = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        below.topMargin = dp(14);
-        take.setOnClickListener(v -> {
-            if (!Mine.everAsked()) {
-                Mine.ask(() -> Mine.takeFree(this::tookFree));
-                return;
-            }
-            Mine.takeFree(this::tookFree);
-        });
-        card.addView(take, below);
-
-        LinearLayout holder = new LinearLayout(this);
-        holder.setPadding(dp(20), dp(14), dp(20), dp(2));
-        holder.addView(card, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        return holder;
-    }
-
-    private static int blend(int colour, int into, float how) {
-        int red = (int) (((colour >> 16) & 0xFF) * (1 - how) + ((into >> 16) & 0xFF) * how);
-        int green = (int) (((colour >> 8) & 0xFF) * (1 - how) + ((into >> 8) & 0xFF) * how);
-        int blue = (int) ((colour & 0xFF) * (1 - how) + (into & 0xFF) * how);
-        return 0xFF000000 | (red << 16) | (green << 8) | blue;
     }
 
     // -------------------------------------------------------- the colours
