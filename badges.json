@@ -1,97 +1,30 @@
 {
-  "_comment": "Badges TikTok Mint draws after a name. The app reads this file from the repository at startup and every five minutes, so a badge is added by editing it here.",
+  "_comment": "TikTok Mint has one public badge, restricted to the two official accounts.",
   "_fields": {
-    "id": "anything, as long as it is unique",
-    "users": "TikTok account ids, the numeric ones that do not change with the username",
-    "image": "a path in this repository; leave it out for the mod's own note",
-    "colour": "RRGGBB to paint the image with; leave it out to keep its own colours",
-    "title": "the heading of the window the badge opens",
-    "text": "what the window says",
-    "button": "what the window's button says",
-    "*_ru, *_uk": "the same field in that language; the app picks by the phone's language"
+    "id": "unique badge id",
+    "users": "TikTok numeric user IDs",
+    "image": "empty uses the built-in Mint badge mark",
+    "title": "popup heading",
+    "text": "popup body",
+    "button": "popup button label"
   },
   "badges": [
     {
-      "id": "developer",
+      "id": "oh_its_me",
       "users": [
-        "7321751563004052486"
-      ],
-      "image": "assets/badges/developer.png",
-      "title": "mint",
-      "text": "o eto razrap tiktok mint",
-      "text_ru": "о, это же самый сексуальный разраб tiktok mint",
-      "text_uk": "о, это же самый сексуальный разраб tiktok mint, извините не знаю укр",
-      "button": "Got it",
-      "button_ru": "ytn",
-      "button_uk": "ytn"
-    },
-    {
-      "id": "owner",
-      "users": [
+        "7321751563004052486",
         "7413409720789369874"
       ],
       "colour": "8DD1B0",
-      "title": "я",
-      "text": "я",
-      "text_ru": "я",
-      "text_uk": "я",
+      "title": "о, это я",
+      "title_ru": "о, это я",
+      "title_uk": "о, це я",
+      "text": "Official TikTok Mint account.",
+      "text_ru": "Официальный аккаунт TikTok Mint.",
+      "text_uk": "Офіційний акаунт TikTok Mint.",
       "button": "Got it",
       "button_ru": "Понятно",
       "button_uk": "Зрозуміло"
-    },
-    {
-      "id": "helper",
-      "users": [],
-      "colour": "64B5F6",
-      "title": "ты кто блять",
-      "text": "помог с разработкой да",
-      "button": "геи",
-      "button_ru": "Понятно",
-      "button_uk": "Зрозуміло"
-    },
-    {
-      "id": "hype",
-      "users": [],
-      "colour": "E57373",
-      "title": "rfhhgg",
-      "text": "смешно, у автора маргуТ явно есть смехуятинка",
-      "button": "Got it",
-      "button_ru": "Понятно",
-      "button_uk": "Зрозуміло"
-    },
-    {
-      "id": "icon",
-      "users": [],
-      "colour": "B388FF",
-      "title": "mint",
-      "text": "ху",
-      "text_ru": "пошел нахуй",
-      "text_uk": "да",
-      "button": "Got it",
-      "button_ru": "Понятно",
-      "button_uk": "Зрозуміло"
-    },
-    {
-      "id": "supporter",
-      "users": [],
-      "colour": "FF6FA5",
-      "title": "Mint",
-      "text": "воу, поддержал кардинеби",
-      "text_ru": "воу, поддержал кардинеби",
-      "text_uk": "воу, поддержал кардинеби",
-      "button": "Got it",
-      "button_ru": "Понятно",
-      "button_uk": "Зрозуміло"
-    },
-    {
-      "id": "chonky",
-      "users": [],
-      "colour": "FFE9A0",
-      "title": "MT",
-      "text": "огромный жирный",
-      "button": "uhh nope",
-      "button_ru": "нет",
-      "button_uk": "no"
     }
   ]
 }
