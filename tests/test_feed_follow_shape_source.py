@@ -51,15 +51,15 @@ class FeedFollowShapeSourceTests(unittest.TestCase):
         self.assertNotIn("Что это значит", logs)
         self.assertNotIn("Diagnostics.report()", logs)
 
-    def test_avatar_material_switch_persists_last_expressive_shape(self):
+    def test_avatar_material_switch_is_retired_but_backdrop_shapes_remain(self):
         shape = (JAVA / "AvatarShape.java").read_text(encoding="utf-8")
         settings = (JAVA / "SettingsActivity.java").read_text(encoding="utf-8")
         self.assertIn('"squircle"', shape)
         self.assertIn('"diamond"', shape)
         self.assertIn('"flower"', shape)
-        self.assertIn("setMaterialEnabled(Context context, boolean enabled)", shape)
-        self.assertIn('"Форма аватара Material 3"', settings)
-        self.assertIn("AvatarShape.setMaterialEnabled(this, on)", settings)
+        self.assertIn("chosen = 0;\n        return 0;", shape)
+        self.assertNotIn('"Форма аватара Material 3"', settings)
+        self.assertIn('"Настроить фигуры фона"', settings)
 
 
 if __name__ == "__main__":
