@@ -242,7 +242,7 @@ public static final String KEY = "badges_on";
 
     /** The built-in developer mark is local and does not depend on the remote badge toggle. */
     public static String developerMark(String uniqueId) {
-        return isDeveloper(uniqueId) ? String.valueOf(DEVELOPER_MARK) : "";
+        return "";
     }
 
     /** Legacy developer-handle hook; account-owned unlocks are added by localEasterEggMark/remote Mine. */
@@ -250,17 +250,13 @@ public static final String KEY = "badges_on";
 
     /** Device fallback while the server has not yet accepted the account's claim. */
     public static String localEasterEggMark(String uid) {
-        if (uid == null || !uid.equals(Account.id()) || Mine.holds(KARDINEBI_EASTER_EGG_KEY)) return "";
-        Context context = Kardinebi.context();
-        if (context == null) return "";
-        boolean unlocked = context.getSharedPreferences(Kardinebi.PREFS, Context.MODE_PRIVATE)
-                .getBoolean(KARDINEBI_EASTER_EGG_KEY, false);
-        return unlocked ? String.valueOf(KARDINEBI_EASTER_EGG_MARK) : "";
+        return "";
     }
 
     public static Badge byMark(char c) {
-        if (c == DEVELOPER_MARK) return DEVELOPER_BADGE;
-        if (c == KARDINEBI_EASTER_EGG_MARK) return KARDINEBI_EASTER_EGG_BADGE;
+        // Legacy local marks no longer represent badges. The sole public badge
+        // is emitted only for the two fixed account IDs in the registry above.
+        if (c == DEVELOPER_MARK || c == KARDINEBI_EASTER_EGG_MARK) return null;
         Badge[] list = numbered;
         int at = c - FIRST;
         return at >= 0 && at < list.length ? list[at] : null;
@@ -405,7 +401,7 @@ public static final String KEY = "badges_on";
             // has exactly one public badge, limited to the two configured UIDs.
             new JSONObject(new String(json, "UTF-8"));
             Badge official = new Badge(
-                    "oh_its_me", "", 0xFF8DD1B0,
+                    "oh_its_me", "kardinebi-1024-glyph.png", 0xFF8DD1B0,
                     "о, это я", "Официальный аккаунт TikTok Mint.", "Понятно");
             Map<String, Badge[]> only = new HashMap<String, Badge[]>();
             only.put("7321751563004052486", new Badge[] { official }); // @tiktokmintt
@@ -417,7 +413,7 @@ public static final String KEY = "badges_on";
             Diary.note("badges: unreadable registry -- " + error);
             // Keep the same restricted set if a cached or remote payload is malformed.
             Badge official = new Badge(
-                    "oh_its_me", "", 0xFF8DD1B0,
+                    "oh_its_me", "kardinebi-1024-glyph.png", 0xFF8DD1B0,
                     "о, это я", "Официальный аккаунт TikTok Mint.", "Понятно");
             Map<String, Badge[]> only = new HashMap<String, Badge[]>();
             only.put("7321751563004052486", new Badge[] { official });
