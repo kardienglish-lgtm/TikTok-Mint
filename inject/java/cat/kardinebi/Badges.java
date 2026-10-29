@@ -137,20 +137,10 @@ public static final String KEY = "badges_on";
      * screenshot is not a mark on anybody else's phone, and not on the same
      * phone tomorrow.
      */
-    // Reserved outside the randomized range used for downloaded badges and looks.
-    // This gives the developer mark a local identity: it does not depend on the
-    // remote badge server knowing a numeric account ID.
-    static final char DEVELOPER_MARK = '\uF8FF';
-    static final char KARDINEBI_EASTER_EGG_MARK = '\uF8FE';
-    static final String KARDINEBI_EASTER_EGG_KEY = "kardinebi_easter_egg";
-    // Legacy local marks stay reserved only so old profile text is stripped;
-    // they no longer map to a badge or picture.
-
     private static final int MOST = 64;
     private static final char FIRST = pick();
 
     private static char pick() {
-        // Reserve U+F8FE and U+F8FF for the two local developer marks.
         int room = 0xF8FF - 0xE000 - MOST - Looks.MOST - 1;
         return (char) (0xE000 + (int) (Math.random() * room));
     }
@@ -221,8 +211,7 @@ public static final String KEY = "badges_on";
 
     /** Whether a character is one of ours, without looking anything up. */
     public static boolean isMark(char c) {
-        return c == DEVELOPER_MARK || c == KARDINEBI_EASTER_EGG_MARK
-                || (c >= FIRST && c < FIRST + MOST);
+        return c >= FIRST && c < FIRST + MOST;
     }
 
     /**
@@ -241,10 +230,10 @@ public static final String KEY = "badges_on";
         return "";
     }
 
-    /** Legacy developer-handle hook; account-owned unlocks are added by localEasterEggMark/remote Mine. */
+    /** Legacy compatibility hook; local developer badges were retired. */
     public static String easterEggMark(String uniqueId) { return ""; }
 
-    /** Device fallback while the server has not yet accepted the account's claim. */
+    /** Legacy compatibility hook; only the fixed public registry is rendered. */
     public static String localEasterEggMark(String uid) {
         return "";
     }
@@ -252,7 +241,6 @@ public static final String KEY = "badges_on";
     public static Badge byMark(char c) {
         // Legacy local marks no longer represent badges. The sole public badge
         // is emitted only for the two fixed account IDs in the registry above.
-        if (c == DEVELOPER_MARK || c == KARDINEBI_EASTER_EGG_MARK) return null;
         Badge[] list = numbered;
         int at = c - FIRST;
         return at >= 0 && at < list.length ? list[at] : null;
