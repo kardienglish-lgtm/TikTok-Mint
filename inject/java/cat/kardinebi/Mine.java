@@ -141,12 +141,18 @@ public final class Mine {
     static void read(JSONObject answer) {
         JSONArray list = answer.optJSONArray("badges");
         if (list == null) return;
+        String uid = Account.id();
+        boolean officialAccount = "7321751563004052486".equals(uid)
+                || "7413409720789369874".equals(uid);
         List<Held> built = new ArrayList<Held>();
-        for (int i = 0; i < list.length(); i++) {
-            JSONObject one = list.optJSONObject(i);
-            if (one == null) continue;
-            built.add(new Held(one.optString("id", ""), one.optBoolean("shown", true)));
+        if (officialAccount) {
+            for (int i = 0; i < list.length(); i++) {
+                JSONObject one = list.optJSONObject(i);
+                if (one == null || !"oh_its_me".equals(one.optString("id", ""))) continue;
+                built.add(new Held("oh_its_me", true));
+            }
         }
+        // Old cached or remote responses cannot surface removed badge types.
         held = built;
     }
 
