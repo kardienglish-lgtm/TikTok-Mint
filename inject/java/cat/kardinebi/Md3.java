@@ -82,14 +82,9 @@ final class Md3 {
         }
     }
 
-    /** The follow affordance is independent of the abandoned feed-tab styling. */
+    /** Material follow affordances are retired; recommendations keep TikTok's native style. */
     static boolean followShapeEnabled() {
-        if (Version.LITE) return false;
-        try {
-            Context context = Kardinebi.context();
-            return context == null || context.getSharedPreferences(Kardinebi.PREFS, Context.MODE_PRIVATE)
-                    .getBoolean("feed_follow_shape", true);
-        } catch (Throwable ignored) { return true; }
+        return false;
     }
 
     private static boolean on(int which) {
