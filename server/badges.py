@@ -75,7 +75,10 @@ FREE_UNTIL = 1790197200          # 2026-09-24 00:00 UTC+3
 #: proved account, so the wait is only there to stop a stuck finger
 EVERY = 5
 
-MOST_BADGES = 16
+MOST_BADGES = 1
+
+OFFICIAL_BADGE = "oh_its_me"
+OFFICIAL_USERS = ("7321751563004052486", "7413409720789369874")
 
 #: the badge that makes somebody a supporter, and the two things it unlocks
 SUPPORTER = "supporter"
@@ -208,13 +211,29 @@ def prepare():
             added   INTEGER NOT NULL DEFAULT 0
         );
     """)
-    # The Easter egg is a first-party, account-owned badge. Keep its metadata
-    # in the registry so /badges can publish the users who unlocked it.
+    # One fixed badge remains. Drop every historical badge and grant it only
+    # to the two official TikTok Mint accounts. This also cleans an existing DB
+    # after upgrading the server, rather than only changing badges.json.
+    db.execute("DELETE FROM held WHERE badge != ?", (OFFICIAL_BADGE,))
+    db.execute("DELETE FROM held WHERE uid NOT IN (?, ?)", OFFICIAL_USERS)
+    db.execute("DELETE FROM badge WHERE id != ?", (OFFICIAL_BADGE,))
+    db.execute("DELETE FROM gradient")
     db.execute(
-        "INSERT OR IGNORE INTO badge (id, colour, image, title, title_ru, title_uk, "
-        "text, text_ru, text_uk, button, claimable) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-        ("kardinebi_easter_egg", "38C875", "", "Kardinebi", "Кардинеби", "Кардинеби",
-         "TikTok Mint Easter egg", "Секретная пасхалка TikTok Mint", "Секретна пасхалка TikTok Mint", "Понятно", 0))
+        "INSERT INTO badge (id, colour, image, title, title_ru, title_uk, "
+        "text, text_ru, text_uk, button, claimable) VALUES (?,?,?,?,?,?,?,?,?,?,?) "
+        "ON CONFLICT(id) DO UPDATE SET colour=excluded.colour, image=excluded.image, "
+        "title=excluded.title, title_ru=excluded.title_ru, title_uk=excluded.title_uk, "
+        "text=excluded.text, text_ru=excluded.text_ru, text_uk=excluded.text_uk, "
+        "button=excluded.button, claimable=0",
+        (OFFICIAL_BADGE, "8DD1B0", "kardinebi-1024-glyph.png", "о, это я",
+         "о, это я", "о, це я", "Official TikTok Mint account.",
+         "Официальный аккаунт TikTok Mint.", "Офіційний акаунт TikTok Mint.",
+         "Понятно", 0))
+    for uid in OFFICIAL_USERS:
+        db.execute(
+            "INSERT INTO held (uid, badge, shown, place, given_at) VALUES (?,?,1,0,?) "
+            "ON CONFLICT(uid, badge) DO UPDATE SET shown=1, place=0",
+            (uid, OFFICIAL_BADGE, int(time.time())))
     # the name telegram gives a picture came after the table did, and a
     # server that is already running is not going to grow the column by
     # being asked for the table again
@@ -347,19 +366,11 @@ def public():
             "title_ru": row[8], "title_uk": row[9],
             "users": [],
         }
-    # the order a person chose is the order their badges are listed in
-    for uid, badge in db.execute(
-            "SELECT uid, badge FROM held WHERE shown = 1 ORDER BY place, badge"):
-        if badge in badges:
-            badges[badge]["users"].append(uid)
-
-    # only accounts that still hold the badge, so a gradient left over from
-    # a badge that was taken away stops being shown at once
-    paid = {uid for (uid,) in db.execute(
-        "SELECT uid FROM held WHERE badge = ?", (SUPPORTER,))}
-    gradients = {uid: colours.split(",") for uid, colours
-                 in db.execute("SELECT uid, colours FROM gradient")
-                 if uid in paid and colours}
+    # The official badge is not hidden by an account preference: it belongs
+    # only to these two IDs, and no other public badge or name gradient exists.
+    if OFFICIAL_BADGE in badges:
+        badges[OFFICIAL_BADGE]["users"] = list(OFFICIAL_USERS)
+    gradients = {}
     db.close()
 
     out = [badges[key] for key in sorted(badges)]
@@ -368,14 +379,10 @@ def public():
 
 
 def mine(uid):
-    """What one account holds, shown or not, in the order it chose."""
-    db = connect()
-    rows = db.execute(
-        "SELECT badge, shown, place FROM held WHERE uid = ? ORDER BY place, badge",
-        (uid,)).fetchall()
-    db.close()
-    return [{"id": badge, "shown": bool(shown), "place": place}
-            for badge, shown, place in rows]
+    """The one fixed official badge; no other account can hold a public badge."""
+    if uid not in OFFICIAL_USERS:
+        return []
+    return [{"id": OFFICIAL_BADGE, "shown": True, "place": 0}]
 
 
 # ------------------------------------------------------------- what is taken
@@ -596,31 +603,8 @@ def wrote(db, uid, ip):
 
 
 def easter_egg(body, ip):
-    """Idempotently award the secret badge to a verified account that unlocked it in Mint."""
-    db = connect()
-    uid = vouched(db, body)
-    if not uid:
-        db.close()
-        return 403, {"error": "prove"}
-    # The registry row is also created by prepare(), but keeping this guard
-    # makes the endpoint safe against a database restored from an old backup.
-    db.execute(
-        "INSERT OR IGNORE INTO badge (id, colour, image, title, title_ru, title_uk, "
-        "text, text_ru, text_uk, button, claimable) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-        ("kardinebi_easter_egg", "38C875", "", "Kardinebi", "Кардинеби", "Кардинеби",
-         "TikTok Mint Easter egg", "Секретная пасхалка TikTok Mint", "Секретна пасхалка TikTok Mint", "Понятно", 0))
-    now = int(time.time())
-    before = db.execute("SELECT 1 FROM held WHERE uid = ? AND badge = ?",
-                        (uid, "kardinebi_easter_egg")).fetchone()
-    if not before:
-        row = db.execute("SELECT COALESCE(MAX(place), -1) + 1 FROM held WHERE uid = ?", (uid,)).fetchone()
-        place = int(row[0] if row else 0)
-        db.execute("INSERT OR IGNORE INTO held (uid, badge, shown, place, given_at) VALUES (?,?,?,?,?)",
-                   (uid, "kardinebi_easter_egg", 1, place, now))
-    db.commit()
-    out = mine(uid)
-    db.close()
-    return 200, {"badges": out, "unlocked": True}
+    """Retired: the public registry has one fixed badge, not account unlocks."""
+    return 410, {"error": "the only public badge is fixed"}
 
 
 def profile(body, ip):
