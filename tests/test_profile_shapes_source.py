@@ -30,7 +30,10 @@ class ProfileShapesSourceTests(unittest.TestCase):
         self.assertIn('type.contains("RecyclerView")', shapes)
         self.assertIn('ProfileShapes.installCommentBackground(cell)', (JAVA / "Comments.java").read_text(encoding="utf-8"))
         self.assertIn('AccountAppearance.prefs(context).edit().putBoolean(KEY, on).apply()', shapes)
-        self.assertIn('"Случайные формы в профилях"', settings)
+        self.assertNotIn('"Случайные формы в профилях"', settings)
+        avatar = (JAVA / "AvatarShape.java").read_text(encoding="utf-8")
+        self.assertIn("static boolean randomProfilesEnabled() {\n        // Profile and comment Material styling is retired.", avatar)
+        self.assertIn("chosen = 0;\n        return 0;", avatar)
         self.assertIn('"Фигуры Material 3 на фоне профиля"', settings)
         self.assertNotIn('Вращающиеся фигуры', settings)
 
