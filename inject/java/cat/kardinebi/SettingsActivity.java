@@ -239,7 +239,7 @@ public class SettingsActivity extends Activity {
         shapes.addView(toggleRow("shuffle", "Случайные формы в профилях", AvatarShape.randomProfilesEnabled(), on -> {
             AvatarShape.setRandomProfilesEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
         }));
-        shapes.addView(quiet("Тонкие геометрические фигуры медленно вращаются за содержимым профилей и списка комментариев. Анимация отключается вместе с системными анимациями."));
+        shapes.addView(quiet("Статичные фигуры рисуются за содержимым профиля. Комментарии остаются в оригинальном стиле TikTok."));
         shapes.addView(line());
         shapes.addView(toggleRow("auto_awesome", "Фигуры Material 3 на фоне профиля", ProfileShapes.enabled(), on -> {
             ProfileShapes.setEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
@@ -547,7 +547,7 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
             AvatarShape.setRandomProfilesEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
         }));
         loading.addView(line());
-        loading.addView(toggleRow("auto_awesome", "Фоновые фигуры в профилях и комментариях", ProfileShapes.enabled(), on -> {
+        loading.addView(toggleRow("auto_awesome", "Фоновые фигуры в профиле", ProfileShapes.enabled(), on -> {
             ProfileShapes.setEnabled(this, on); markChanged(); rebuildAfterSwitchAnimation();
         }));
         loading.addView(line());

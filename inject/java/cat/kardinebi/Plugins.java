@@ -176,46 +176,14 @@ public final class Plugins {
 
     /** Everything installed, whether it runs or not. */
     public static synchronized List<Info> list() {
-        Context context = Kardinebi.context();
-        if (context == null) return Collections.emptyList();
-        if (!read) scan(context);
-        List<Info> out = new ArrayList<>();
-        for (Live live : installed) out.add(live.info);
-        return out;
+        return Collections.emptyList();
     }
 
     public static boolean isEnabled(String id) {
-        Context context = Kardinebi.context();
-        if (context == null) return false;
-        return prefs(context).getBoolean(id, false);
+        return false;
     }
 
-    public static synchronized boolean openSettings(String id,Activity activity) {
-        for(Live live:installed) if(live.info.id.equals(id)) {
-            KardinebiPlugin target=live.instance!=null?live.instance:live.settings;
-            // Enabled, but never started in this process (the start was skipped or failed
-            // earlier): start it now rather than claiming it has no settings.
-            if(target==null && isEnabled(id)) {
-                Context context=Kardinebi.context();
-                if(context!=null && start(context,live)) {publish();target=live.instance;}
-            }
-            if(target==null)return false;
-            try {
-                if(target.onOpenSettings(activity))return true;
-                // Compatibility for older plugins exposing a public settings method.
-                for(String name:new String[]{"openSettings","showSettings","showSettingsDialog"}) {
-                    for(Class<?> argument:new Class<?>[]{Activity.class,Context.class}) {
-                        try {
-                            java.lang.reflect.Method method=target.getClass().getMethod(name,argument);
-                            if(method.getReturnType()!=Void.TYPE && method.getReturnType()!=Boolean.TYPE)continue;
-                            Object result=method.invoke(target,activity);
-                            if(method.getReturnType()==Void.TYPE || Boolean.TRUE.equals(result))return true;
-                        } catch(NoSuchMethodException absent){}
-                    }
-                }
-            } catch(Throwable error){Diary.note("plugin settings "+id+": "+error);live.info.trouble=String.valueOf(error);}
-            return false;
-        }
+    public static synchronized boolean openSettings(String id, Activity activity) {
         return false;
     }
 
@@ -233,15 +201,6 @@ public final class Plugins {
 
     /** Start an enabled plugin again, for instance after it was dropped for throwing. */
     public static synchronized boolean revive(String id) {
-        Context context=Kardinebi.context();
-        if(context==null || !isEnabled(id))return false;
-        if(!read)scan(context);
-        for(Live live:installed) if(live.info.id.equals(id)) {
-            live.instance=null;
-            boolean ok=start(context,live);
-            publish();
-            return ok;
-        }
         return false;
     }
 
@@ -252,24 +211,15 @@ public final class Plugins {
      */
     public static synchronized void setEnabled(String id, boolean enabled) {
         Context context = Kardinebi.context();
-        if (context == null) return;
-        prefs(context).edit().putBoolean(id, enabled).apply();
-        if (!read) scan(context);
+        if (context != null && id != null) prefs(context).edit().putBoolean(id, false).apply();
         for (Live live : installed) {
-            if (!live.info.id.equals(id)) continue;
-            if (enabled && live.instance == null) {
-                start(context, live);
-            } else if (!enabled && live.instance != null) {
-                KardinebiPlugin instance = live.instance;
-                live.instance = null;
-                try {
-                    instance.onStop();
-                } catch (Throwable error) {
-                    Diary.note("plugin " + id + " threw on stop: " + error);
-                }
-            }
-            break;
+            if (id == null || !live.info.id.equals(id) || live.instance == null) continue;
+            KardinebiPlugin instance = live.instance;
+            live.instance = null;
+            try { instance.onStop(); }
+            catch (Throwable error) { Diary.note("disabled plugin onStop: " + error); }
         }
+        running = new KardinebiPlugin[0];
         publish();
     }
 
@@ -342,13 +292,26 @@ public final class Plugins {
      * Called from the mod's start-up provider, before TikTok's own onCreate.
      */
     public static synchronized void startAll(Context context) {
-        // Third-party plugin execution has been retired from TikTok Mint.
-        // Do not load dex files or activate scripts from the user's files.
-        running = new KardinebiPlugin[0];
+        // Third-party plugins are removed from this build: clear stored
+        // scripts, turn off and delete installed binary plugins, and never
+        // load a plugin class into TikTok's process.
+        if (context != null) {
+            ScriptPlugins.reload(context);
+            if (!read) scan(context);
+            for (Live live : new ArrayList<>(installed)) {
+                if (live.instance != null) {
+                    try { live.instance.onStop(); }
+                    catch (Throwable error) { Diary.note("plugin shutdown: " + error); }
+                }
+                remove(live.info.folder);
+            }
+            prefs(context).edit().clear().apply();
+        }
         installed.clear();
+        running = new KardinebiPlugin[0];
         read = true;
-        if (context != null) ScriptPlugins.reload(context);
-        Diary.note("plugins: disabled");
+        publish();
+        Diary.note("plugins: disabled in this build");
     }
 
     private static boolean start(Context context, Live live) {
@@ -650,44 +613,12 @@ public final class Plugins {
         File staging=new File(context.getCacheDir(),"mtp-review-"+java.util.UUID.randomUUID());
         try {unpack(context,source,staging);Info info=readManifest(staging);if(info==null)throw new Exception(Local.of("Некорректный manifest.json"));PluginAudit.Report report=PluginAudit.folder(staging);report.pluginId=info.id;return report;}finally{remove(staging);}
     }
-    public static synchronized String install(Context context, Uri source) throws Exception {return install(context,source,null);}
-    public static synchronized String install(Context context, Uri source,String expectedDigest) throws Exception {
-        File staging = new File(context.getCacheDir(), "mtp-" + System.currentTimeMillis());
-        try {
-            unpack(context, source, staging);
+    public static synchronized String install(Context context, Uri source) throws Exception {
+        throw new Exception(Local.of("Плагины отключены в этой сборке"));
+    }
 
-            Info info = readManifest(staging);
-            if (info == null) throw new Exception("no readable " + MANIFEST + " in the plugin");
-            if (!new File(staging, DEX).isFile()) throw new Exception("no " + DEX + " in the plugin");
-            if(info.trouble!=null)throw new Exception(info.trouble);
-            if (info.minApi > KardinebiPlugin.API) {
-                throw new Exception("the plugin wants api " + info.minApi
-                        + " and this TikTok Mint has " + KardinebiPlugin.API);
-            }
-            if (info.tiktok.length() > 0 && !info.tiktok.equals(Version.TIKTOK)) {
-                throw new Exception("the plugin was written for TikTok " + info.tiktok
-                        + " and this is " + Version.TIKTOK);
-            }
-
-            PluginAudit.Report report=PluginAudit.folder(staging);
-            if(report.blocked)throw new Exception(report.summary());
-            if(expectedDigest!=null && !expectedDigest.equals(report.digest))throw new Exception(Local.of("Плагин изменился после проверки"));
-            setEnabled(info.id,false);
-            File home = new File(home(context), safe(info.id));
-            File backup=new File(context.getCacheDir(),"mtp-old-"+java.util.UUID.randomUUID());
-            boolean had=home.exists();
-            if(had&&!home.renameTo(backup))throw new Exception(Local.of("Не удалось сохранить предыдущий плагин"));
-            try {
-                if(!staging.renameTo(home)){copyFolder(staging,home);remove(staging);}
-            }catch(Exception failed){remove(home);if(had&&!backup.renameTo(home))Diary.note("plugin rollback failed: "+info.id);throw failed;}
-            remove(backup);
-            prefs(context).edit().putBoolean(info.id,false).putString("audit:"+info.id,report.summary()).apply();
-            read = false;
-            Diary.note("plugin installed: " + info.id + " " + info.version);
-            return info.id;
-        } finally {
-            remove(staging);
-        }
+    public static synchronized String install(Context context, Uri source, String expectedDigest) throws Exception {
+        throw new Exception(Local.of("Плагины отключены в этой сборке"));
     }
 
     /** Take a plugin off the phone. It stops being called at once. */

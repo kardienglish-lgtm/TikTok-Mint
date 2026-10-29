@@ -143,13 +143,8 @@ public static final String KEY = "badges_on";
     static final char DEVELOPER_MARK = '\uF8FF';
     static final char KARDINEBI_EASTER_EGG_MARK = '\uF8FE';
     static final String KARDINEBI_EASTER_EGG_KEY = "kardinebi_easter_egg";
-    private static final Badge DEVELOPER_BADGE = new Badge(
-            "mint_developer", "", 0xFF9B6DFF,
-            "TikTok Mint", "@kardineb — разработчик мода TikTok Mint.", "Понятно");
-    private static final Badge KARDINEBI_EASTER_EGG_BADGE = new Badge(
-            "kardinebi_easter_egg", "", 0xFF38C875,
-            "Кардинеби", "супер секретная пасхалочко", "Понятно");
-
+    // These two private-use characters remain reserved so stale cached names are stripped,
+    // but neither is a badge anymore.
     private static final int MOST = 64;
     private static final char FIRST = pick();
 
@@ -237,7 +232,7 @@ public static final String KEY = "badges_on";
         if (uniqueId == null) return false;
         String handle = uniqueId.trim();
         while (handle.startsWith("@")) handle = handle.substring(1);
-        return "kardineb".equalsIgnoreCase(handle);
+        return false;
     }
 
     /** The built-in developer mark is local and does not depend on the remote badge toggle. */
@@ -248,14 +243,11 @@ public static final String KEY = "badges_on";
     /** Legacy developer-handle hook; account-owned unlocks are added by localEasterEggMark/remote Mine. */
     public static String easterEggMark(String uniqueId) { return ""; }
 
-    /** Device fallback while the server has not yet accepted the account's claim. */
-    public static String localEasterEggMark(String uid) {
-        return "";
-    }
+    /** Local legacy unlocks no longer create a badge mark. */
+    public static String localEasterEggMark(String uid) { return ""; }
 
     public static Badge byMark(char c) {
-        // Legacy local marks no longer represent badges. The sole public badge
-        // is emitted only for the two fixed account IDs in the registry above.
+        // Do not resolve legacy local developer/egg marks to badge images.
         if (c == DEVELOPER_MARK || c == KARDINEBI_EASTER_EGG_MARK) return null;
         Badge[] list = numbered;
         int at = c - FIRST;

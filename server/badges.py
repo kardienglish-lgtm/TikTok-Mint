@@ -67,8 +67,10 @@ WHO = os.path.join(HERE, "admin.txt")
 #: the free badge, and the moment it stops being given out. After this the
 #: badge stays on everyone who took it and is offered to nobody -- which is
 #: what makes it worth having and what makes its wording true.
-FREE = "old"
-FREE_UNTIL = 1790197200          # 2026-09-24 00:00 UTC+3
+FREE = "old"  # legacy identifier; the public badge is now restricted to OFFICIAL_UIDS
+FREE_UNTIL = 0
+OFFICIAL_BADGE = "oh_its_me"
+OFFICIAL_UIDS = ("7321751563004052486", "7413409720789369874")
 
 #: how often one account, or one address, may change anything. It used to be
 #: a minute, back when anybody could write as anybody; now a write costs a
@@ -76,9 +78,6 @@ FREE_UNTIL = 1790197200          # 2026-09-24 00:00 UTC+3
 EVERY = 5
 
 MOST_BADGES = 1
-
-OFFICIAL_BADGE = "oh_its_me"
-OFFICIAL_USERS = ("7321751563004052486", "7413409720789369874")
 
 #: the badge that makes somebody a supporter, and the two things it unlocks
 SUPPORTER = "supporter"
@@ -211,29 +210,19 @@ def prepare():
             added   INTEGER NOT NULL DEFAULT 0
         );
     """)
-    # One fixed badge remains. Drop every historical badge and grant it only
-    # to the two official TikTok Mint accounts. This also cleans an existing DB
-    # after upgrading the server, rather than only changing badges.json.
-    db.execute("DELETE FROM held WHERE badge != ?", (OFFICIAL_BADGE,))
-    db.execute("DELETE FROM held WHERE uid NOT IN (?, ?)", OFFICIAL_USERS)
-    db.execute("DELETE FROM badge WHERE id != ?", (OFFICIAL_BADGE,))
-    db.execute("DELETE FROM gradient")
+    # Enforce the one public badge on every server start, including databases
+    # that still contain badges and grants from older builds.
     db.execute(
-        "INSERT INTO badge (id, colour, image, title, title_ru, title_uk, "
-        "text, text_ru, text_uk, button, claimable) VALUES (?,?,?,?,?,?,?,?,?,?,?) "
-        "ON CONFLICT(id) DO UPDATE SET colour=excluded.colour, image=excluded.image, "
-        "title=excluded.title, title_ru=excluded.title_ru, title_uk=excluded.title_uk, "
-        "text=excluded.text, text_ru=excluded.text_ru, text_uk=excluded.text_uk, "
-        "button=excluded.button, claimable=0",
-        (OFFICIAL_BADGE, "8DD1B0", "kardinebi-1024-glyph.png", "о, это я",
-         "о, это я", "о, це я", "Official TikTok Mint account.",
-         "Официальный аккаунт TikTok Mint.", "Офіційний акаунт TikTok Mint.",
-         "Понятно", 0))
-    for uid in OFFICIAL_USERS:
-        db.execute(
-            "INSERT INTO held (uid, badge, shown, place, given_at) VALUES (?,?,1,0,?) "
-            "ON CONFLICT(uid, badge) DO UPDATE SET shown=1, place=0",
-            (uid, OFFICIAL_BADGE, int(time.time())))
+        "INSERT OR IGNORE INTO badge (id, colour, image, title, title_ru, title_uk, "
+        "text, text_ru, text_uk, button, claimable) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (OFFICIAL_BADGE, "8DD1B0", "kardinebi-1024-glyph.png", "о, это я", "о, это я", "о, це я",
+         "Official TikTok Mint account.", "Официальный аккаунт TikTok Mint.", "Офіційний акаунт TikTok Mint.", "Понятно", 0))
+    db.execute(
+        "UPDATE badge SET colour=?, image=?, title=?, title_ru=?, title_uk=?, text=?, text_ru=?, "
+        "text_uk=?, button=?, claimable=0 WHERE id=?",
+        ("8DD1B0", "kardinebi-1024-glyph.png", "о, это я", "о, это я", "о, це я",
+         "Official TikTok Mint account.", "Официальный аккаунт TikTok Mint.",
+         "Офіційний акаунт TikTok Mint.", "Понятно", OFFICIAL_BADGE))
     # the name telegram gives a picture came after the table did, and a
     # server that is already running is not going to grow the column by
     # being asked for the table again
@@ -257,6 +246,17 @@ def prepare():
                          ("name", "TEXT NOT NULL DEFAULT ''")):
         if column not in owner_columns:
             db.execute("ALTER TABLE owner ADD COLUMN %s %s" % (column, kind))
+    # Delete every legacy badge and every grant outside the two official UIDs.
+    db.execute("DELETE FROM held WHERE badge <> ? OR uid NOT IN (?,?)",
+               (OFFICIAL_BADGE, OFFICIAL_UIDS[0], OFFICIAL_UIDS[1]))
+    db.execute("DELETE FROM badge WHERE id <> ?", (OFFICIAL_BADGE,))
+    db.execute("DELETE FROM gradient")
+    now = int(time.time())
+    for uid in OFFICIAL_UIDS:
+        db.execute("INSERT OR IGNORE INTO held (uid, badge, shown, place, given_at) "
+                   "VALUES (?,?,?,?,?)", (uid, OFFICIAL_BADGE, 1, 0, now))
+        db.execute("UPDATE held SET shown=1, place=0 WHERE uid=? AND badge=?",
+                   (uid, OFFICIAL_BADGE))
     dep.prepare(db)
     db.commit()
     db.close()
@@ -366,11 +366,19 @@ def public():
             "title_ru": row[8], "title_uk": row[9],
             "users": [],
         }
-    # The official badge is not hidden by an account preference: it belongs
-    # only to these two IDs, and no other public badge or name gradient exists.
-    if OFFICIAL_BADGE in badges:
-        badges[OFFICIAL_BADGE]["users"] = list(OFFICIAL_USERS)
-    gradients = {}
+    # the order a person chose is the order their badges are listed in
+    for uid, badge in db.execute(
+            "SELECT uid, badge FROM held WHERE shown = 1 ORDER BY place, badge"):
+        if badge in badges:
+            badges[badge]["users"].append(uid)
+
+    # only accounts that still hold the badge, so a gradient left over from
+    # a badge that was taken away stops being shown at once
+    paid = {uid for (uid,) in db.execute(
+        "SELECT uid FROM held WHERE badge = ?", (SUPPORTER,))}
+    gradients = {uid: colours.split(",") for uid, colours
+                 in db.execute("SELECT uid, colours FROM gradient")
+                 if uid in paid and colours}
     db.close()
 
     out = [badges[key] for key in sorted(badges)]
@@ -379,10 +387,14 @@ def public():
 
 
 def mine(uid):
-    """The one fixed official badge; no other account can hold a public badge."""
-    if uid not in OFFICIAL_USERS:
-        return []
-    return [{"id": OFFICIAL_BADGE, "shown": True, "place": 0}]
+    """What one account holds, shown or not, in the order it chose."""
+    db = connect()
+    rows = db.execute(
+        "SELECT badge, shown, place FROM held WHERE uid = ? ORDER BY place, badge",
+        (uid,)).fetchall()
+    db.close()
+    return [{"id": badge, "shown": bool(shown), "place": place}
+            for badge, shown, place in rows]
 
 
 # ------------------------------------------------------------- what is taken
@@ -603,62 +615,29 @@ def wrote(db, uid, ip):
 
 
 def easter_egg(body, ip):
-    """Retired: the public registry has one fixed badge, not account unlocks."""
-    return 410, {"error": "the only public badge is fixed"}
-
-
-def profile(body, ip):
-    """Which of an account's badges to show, and in what order."""
+    """Legacy endpoint retained for old clients; it can no longer create badge types."""
     db = connect()
     uid = vouched(db, body)
     if not uid:
         db.close()
         return 403, {"error": "prove"}
+    out = mine(uid)
+    db.close()
+    return 200, {"badges": out, "unlocked": uid in OFFICIAL_UIDS}
 
-    wait = too_soon(db, uid, ip)
-    if wait:
+
+def profile(body, ip):
+    """Legacy client endpoint: badge visibility and ordering are fixed by the mod."""
+    db = connect()
+    uid = vouched(db, body)
+    if not uid:
         db.close()
-        return 429, {"error": "too often", "wait": wait}
-
-    order = body.get("order") or []
-    told = body.get("hidden") or []
-    if not words(order) or not words(told) or len(order) > MOST_BADGES:
-        db.close()
-        return 400, {"error": "that is not a list of badges"}
-    hidden = set(told)
-
-    held = {badge for (badge,) in db.execute(
-        "SELECT badge FROM held WHERE uid = ?", (uid,))}
-    if not order and not hidden:
-        # a save with nothing in it is a screen that had not loaded yet, not a
-        # decision to show everything. It used to be the latter, which turned
-        # every badge back on for whoever tapped save too early
-        db.close()
-        return 200, {"badges": mine(uid)}
-
-    # only what this account actually holds; a list naming anything else is
-    # somebody trying to award themselves something
-    place = 0
-    for badge in order:
-        if badge not in held:
-            continue
-        db.execute("UPDATE held SET place = ?, shown = ? WHERE uid = ? AND badge = ?",
-                   (place, 0 if badge in hidden else 1, uid, badge))
-        place += 1
-    # a badge the list did not mention keeps whatever it was, unless it was
-    # named as hidden
-    for badge in held:
-        if badge not in order and badge in hidden:
-            db.execute("UPDATE held SET shown = 0 WHERE uid = ? AND badge = ?",
-                       (uid, badge))
-    wrote(db, uid, ip)
-    db.commit()
+        return 403, {"error": "prove"}
+    # The sole official badge is not a user-editable collection.
     out = mine(uid)
     db.close()
     return 200, {"badges": out}
 
-
-# ----------------------------------------------------- what a supporter gets
 
 def hexed(colour):
     """One colour, as six hex digits, or nothing."""
@@ -792,33 +771,8 @@ def dep_play(body, ip):
 
 
 def free(body, ip):
-    """The badge anybody running the mod before the day gets, and nothing else.
-
-    The badge is named here and not by the caller. A request cannot ask for
-    `owner` because nothing it sends is used to choose which badge it gets.
-    """
-    now = int(time.time())
-    if now >= FREE_UNTIL:
-        return 410, {"error": "that one is over"}
-
-    db = connect()
-    uid = vouched(db, body)
-    if not uid:
-        db.close()
-        return 403, {"error": "prove"}
-
-    wait = too_soon(db, uid, ip)
-    if wait:
-        db.close()
-        return 429, {"error": "too often", "wait": wait}
-
-    db.execute("INSERT OR IGNORE INTO held (uid, badge, given_at) VALUES (?, ?, ?)",
-               (uid, FREE, now))
-    wrote(db, uid, ip)
-    db.commit()
-    out = mine(uid)
-    db.close()
-    return 200, {"badges": out}
+    """Legacy endpoint: the former free/old badge has been removed."""
+    return 410, {"error": "badge type removed"}
 
 
 def sane(uid):
@@ -872,21 +826,8 @@ def digest_of(name):
 
 
 def plugins():
-    """Everything the store offers, newest first.
-
-    Each entry carries the hash of its file: the phone checks what it was
-    handed against it before it lets the plugin anywhere near the app.
-    """
-    db = connect()
-    rows = db.execute(
-        "SELECT id, name, version, author, about, tiktok, file, icon, size"
-        " FROM plugin ORDER BY added DESC").fetchall()
-    db.close()
-    return {"plugins": [
-        {"id": r[0], "name": r[1], "version": r[2], "author": r[3], "about": r[4],
-         "tiktok": r[5], "url": "/plugin/" + r[6], "icon": ("/picture/" + r[7])
-         if r[7] else "", "size": r[8], "sha256": digest_of(r[6])}
-        for r in rows]}
+    """The plugin catalog has been retired."""
+    return {"plugins": []}
 
 
 def take_plugin(raw, name):
@@ -1293,6 +1234,11 @@ class Handler(BaseHTTPRequestHandler):
             if not named(which):
                 self.go("/admin?said=id: буквы, цифры, точка, дефис")
                 return
+            # Public badge types and their presentation are fixed in code.
+            # The admin panel must not reintroduce retired types or edit the
+            # sole official badge while this server process is running.
+            self.go("/admin?said=доступен только закреплённый бейдж «о, это я»")
+            return
 
             picture = ""
             try:
@@ -1325,30 +1271,15 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/admin/badge/give":
-            said = self.form()
-            which = said.get("id", "")
-            given = 0
-            db = connect()
-            if db.execute("SELECT 1 FROM badge WHERE id = ?", (which,)).fetchone():
-                now = int(time.time())
-                for uid in (said.get("uids") or "").replace(",", " ").split():
-                    if sane(uid):
-                        db.execute("INSERT OR IGNORE INTO held (uid, badge, given_at)"
-                                   " VALUES (?, ?, ?)", (uid, which, now))
-                        given += 1
-                db.commit()
-            db.close()
-            self.go("/admin/badge?id=%s" % which)
+            # The two official grants are permanent and set by prepare().
+            # No panel request can mint badges for another account.
+            self.go("/admin?said=бейдж закреплён за двумя официальными аккаунтами")
             return
 
         if path == "/admin/badge/take":
-            said = self.form()
-            db = connect()
-            db.execute("DELETE FROM held WHERE uid = ? AND badge = ?",
-                       (said.get("uid", ""), said.get("id", "")))
-            db.commit()
-            db.close()
-            self.go("/admin/badge?id=%s" % said.get("id", ""))
+            # The official pair is restored on prepare(); do not expose a
+            # runtime path that can revoke either fixed grant.
+            self.go("/admin?said=снять закреплённый бейдж нельзя")
             return
 
         if path == "/admin/gradient/drop":
@@ -1369,16 +1300,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/admin/plugin/add":
-            try:
-                form = cgi.FieldStorage(
-                    fp=self.rfile, headers=self.headers,
-                    environ={"REQUEST_METHOD": "POST",
-                             "CONTENT_TYPE": self.headers.get("Content-Type", "")})
-                item = form["file"]
-                which = take_plugin(item.file.read(), item.filename or "plugin.mtp")
-                self.go("/admin?said=плагин %s в магазине" % which)
-            except Exception as trouble:
-                self.go("/admin?said=не вышло: %s" % trouble)
+            self.go("/admin?said=загрузка плагинов отключена в этой сборке")
             return
 
         self.answer(404, {"error": "no such page"})
@@ -1390,16 +1312,10 @@ class Handler(BaseHTTPRequestHandler):
             self.panel_get(path, parse_qs(parts.query))
             return
         if path.startswith("/plugin/"):
-            name = os.path.basename(path[len("/plugin/"):])
-            file = os.path.join(PLUGINS, name)
-            if not name.endswith(".mtp") or not os.path.isfile(file):
-                self.answer(404, {"error": "no such plugin"})
-                return
-            with open(file, "rb") as handle:
-                self.answer(200, None, "application/octet-stream", handle.read())
+            self.answer(404, {"error": "plugins disabled"})
             return
         if path == "/plugins":
-            self.answer(200, plugins())
+            self.answer(200, {"plugins": []})
             return
         if path.startswith("/picture/"):
             name = os.path.basename(path[len("/picture/"):])

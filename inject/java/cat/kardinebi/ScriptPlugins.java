@@ -35,17 +35,12 @@ public final class ScriptPlugins {
   }
   return new Program(j);
  }
- static synchronized void reload(Context c){
-  // User-installed command plugins have been retired alongside dex plugins.
-  // An empty active list also keeps old saved definitions inert after upgrade.
-  active=new Program[0];
-  Accent.reload();
- }
- static synchronized void save(Context c,String raw,boolean enabled)throws Exception{Program p=check(raw);android.content.SharedPreferences prefs=c.getSharedPreferences(STORE,0);int n=0;for(String k:prefs.getAll().keySet())if(k.startsWith("source:"))n++;if(!prefs.contains("source:"+p.id)&&n>=16)throw new Exception(Local.of("Не больше 16 плагинов"));prefs.edit().putString("source:"+p.id,p.source.toString()).putBoolean("on:"+p.id,enabled).apply();reload(c);}
+ static synchronized void reload(Context c){active=new Program[0];c.getSharedPreferences(STORE,0).edit().clear().apply();Accent.reload();}
+ static synchronized void save(Context c,String raw,boolean enabled)throws Exception{c.getSharedPreferences(STORE,0).edit().clear().apply();active=new Program[0];throw new Exception(Local.of("Плагины отключены в этой сборке"));}
  public static String name(String uid,String value){for(Program p:active){String v=p.names.get(uid);if(v!=null)value=v;}return value;}
  public static int colour(int value){for(Program p:active)for(int i=0;i<p.colourFrom.length;i++)if(p.colourFrom[i]==value){value=p.colourTo[i];break;}return value;}
  static final String SAMPLE="{\"schema\":1,\"id\":\"my.commands\",\"name\":\"Мои команды\",\"version\":\"1.0\",\"author\":\"Автор\",\"rows\":[{\"title\":\"Привет\",\"action\":\"window\",\"value\":\"Мой плагин работает без сборки\"}]}";
- static List<Program> list(Context c){List<Program> out=new ArrayList<>();Map<String,?> all=c.getSharedPreferences(STORE,0).getAll();List<String> keys=new ArrayList<>(all.keySet());Collections.sort(keys);for(String key:keys)if(key.startsWith("source:")&&out.size()<16)try{out.add(check((String)all.get(key)));}catch(Exception ignored){}return out;}
+ static List<Program> list(Context c){c.getSharedPreferences(STORE,0).edit().clear().apply();return new ArrayList<>();}
  static void details(Context c,Program program,Runnable changed){
   Panel p=Panel.with(c,Skin.material3(c),program.name);
   boolean enabled=c.getSharedPreferences(STORE,0).getBoolean("on:"+program.id,false);
