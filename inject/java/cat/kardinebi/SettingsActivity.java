@@ -486,6 +486,13 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
             restoreScroll(previousScroll);
             return;
         }
+        if (settingsGroup == 9) {
+            column.addView(m3SectionHeader(9));
+            myAccountContent();
+            showRestartBar();
+            restoreScroll(previousScroll);
+            return;
+        }
         if (settingsGroup == 0) {
             // Main page: large Material 3 title, then the Telegram tile first
             column.addView(m3Header());
@@ -760,18 +767,7 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
                 this::pickResetGroup));
         column.addView(wrap(backup));
 
-        column.addView(section(Text.PLUGINS));
-        LinearLayout plugins = card();
-        plugins.addView(actionRow("add", Local.of("Добавить плагин"), null, this::showPluginAdd));
-        List<Plugins.Info> installed = Plugins.list();
-        List<ScriptPlugins.Program> commands=ScriptPlugins.list(this);
-        if(installed.isEmpty()&&commands.isEmpty())plugins.addView(quiet(Local.of("Пока нет установленных плагинов")));
-        for(ScriptPlugins.Program program:commands){
-            boolean enabled=getSharedPreferences(ScriptPlugins.STORE,0).getBoolean("on:"+program.id,false);
-            plugins.addView(actionRow("extension",program.name,enabled?Local.of("Включён"):Local.of("Выключен"),()->ScriptPlugins.details(this,program,this::rebuild)));
-        }
-        for(Plugins.Info info:installed)plugins.addView(pluginRow(info));
-        column.addView(wrap(plugins));
+        // Third-party plugins are no longer offered in settings.
 
         column.addView(section(Text.PINNED_FRIENDS));
         LinearLayout friends=card();friends.addView(actionRow("people",Text.PINNED_FRIENDS,null,()->PinnedFriends.show(this)));
@@ -4292,6 +4288,48 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
     }
 
 
+    /** Account tools stay separate from profile appearance and feature toggles. */
+    private void myAccountContent() {
+        String uid = Account.id();
+        String handle = Account.profileHandle();
+        String display = Account.profileName();
+        column.addView(section("Аккаунт TikTok"));
+        LinearLayout account = card();
+        account.addView(actionRow("account_circle",
+                display == null || display.isEmpty() ? "Текущий аккаунт" : display,
+                handle == null || handle.isEmpty() ? "Имя пользователя пока не получено" : "@" + handle,
+                () -> {
+                    if (uid != null && !uid.isEmpty()) copy("TikTok account ID", uid);
+                    else new ModDialog.Builder(this, skin).setTitle("Аккаунт TikTok")
+                            .setMessage("TikTok ещё не передал ID аккаунта. Открой свой профиль и вернись сюда.")
+                            .setPositiveButton("Понятно", null).show();
+                }));
+        account.addView(line());
+        account.addView(actionRow("content_copy", "Скопировать ID аккаунта",
+                uid == null || uid.isEmpty() ? "ID пока неизвестен" : uid,
+                () -> {
+                    if (uid != null && !uid.isEmpty()) copy("TikTok account ID", uid);
+                    else Screen.say("ID аккаунта пока неизвестен");
+                }));
+        column.addView(wrap(account));
+
+        column.addView(section("Действия аккаунта"));
+        LinearLayout actions = card();
+        actions.addView(actionRow("repeat", "Открыть страницу репостов",
+                "Перейди в свой профиль и выбери вкладку репостов вручную",
+                () -> new ModDialog.Builder(this, skin).setTitle("Репосты TikTok")
+                        .setMessage("Открой свой профиль в TikTok и вкладку репостов. Автоматическое удаление всех репостов для этой версии пока не подключено.")
+                        .setPositiveButton("Понятно", null).show()));
+        actions.addView(line());
+        actions.addView(actionRow("delete", "Удалить все свои репосты",
+                "Неактивно: безопасный обработчик для этой версии ещё не найден",
+                () -> new ModDialog.Builder(this, skin).setTitle("Удаление репостов")
+                        .setMessage("Кнопка пока не запускает удаление: в текущей версии нет проверенного нативного обработчика, который снимал бы репосты со всех публикаций. Я не буду имитировать успешное удаление или нажимать случайные элементы.")
+                        .setPositiveButton("Понятно", null).show()));
+        column.addView(wrap(actions));
+        column.addView(quiet("Управление аккаунтом работает локально. Удаление публикаций и репостов должно оставаться подтверждаемым действием."));
+    }
+
     private void chooseSeekStep(){
         new ModDialog.Builder(this).setItems(new String[]{"5","10","15","30","60",Text.CUSTOM_SPEED},(dialog,index)->{
             if(index<5){AccountAppearance.prefs(this).edit().putInt(PlayerTools.STEP,new int[]{5,10,15,30,60}[index]).apply();rebuild();return;}
@@ -4457,7 +4495,8 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
         String[] notes = {
                 "Цвета, формы и шрифты", "Профиль, значки и оформление имени", "Лента, фильтры и проигрыватель",
                 "Загрузки, копии и диагностика", "Версия и сведения о сборке", "Установка и управление плагинами",
-                "Сообщения, серии и уведомления", Text.FUN_NOTE
+                "Сообщения, серии и уведомления", Text.FUN_NOTE,
+                "ID аккаунта и действия с собственными репостами"
         };
         return group >= 1 && group <= notes.length ? notes[group - 1] : null;
     }
@@ -4472,6 +4511,7 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
             case 6: return Local.of("Дополнения");
             case 7: return Local.of("Чаты и уведомления");
             case 8: return Text.FUN;
+            case 9: return Local.of("Мой аккаунт");
             default: return "TikTok Mint";
         }
     }
@@ -4483,7 +4523,7 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
                 Local.of("Скачивание, резервные копии, диагностика и журнал. Сохраните копию перед экспериментами."),
                 Local.of("Здесь находятся версия мода, обновления, журнал и участники."), Local.of("Магазин, установка и настройки плагинов. Плагины запускают дополнительный код; устанавливайте только те, которым доверяете."),
                 Local.of("Закреплённые друзья, автопродление серий и уведомления мода."),
-                Text.FUN_HELP};
+                Text.FUN_HELP, Local.of("ID текущего аккаунта и доступные действия с ним.")};
         Panel.with(this,skin,Local.of("Подсказки")).text(notes[Math.max(0,Math.min(notes.length-1,settingsGroup))])
                 .primary(Local.of("Понятно"),null).show();
     }
@@ -4550,8 +4590,9 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
         LinearLayout outer = new LinearLayout(this);
         outer.setOrientation(LinearLayout.VERTICAL);
         outer.setPadding(dp(12), dp(4), dp(12), dp(8));
-        int[] order = Version.LITE ? new int[] {3, 1, 2, 4, 8, 5} : new int[] {3, 1, 2, 7, 4, 6, 8, 5};
-        String[] glyphs = {"palette", "group", "play_circle", "tune", "info", "extension", "chat", "flare"};
+        int[] order = Version.LITE ? new int[] {3, 1, 2, 4, 9, 8, 5}
+                : new int[] {3, 1, 2, 7, 4, 9, 8, 5};
+        String[] glyphs = {"palette", "group", "play_circle", "tune", "info", "extension", "chat", "flare", "account_circle"};
         int i = 0;
         while (i < order.length) {
             boolean wide = i == 0;
@@ -4618,9 +4659,9 @@ video.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabl
         subtitle.setPadding(dp(24), 0, dp(24), dp(12));
         outer.addView(subtitle);
 
-        String[] glyphs = {"palette", "group", "play_circle", "tune", "info", "extension", "chat", "flare"};
-        int[] shelf = Version.LITE ? new int[] {3, 1, 2, 4, 8, 5}
-                : new int[] {3, 1, 2, 7, 4, 6, 8, 5};
+        String[] glyphs = {"palette", "group", "play_circle", "tune", "info", "extension", "chat", "flare", "account_circle"};
+        int[] shelf = Version.LITE ? new int[] {3, 1, 2, 4, 9, 8, 5}
+                : new int[] {3, 1, 2, 7, 4, 9, 8, 5};
 
         LinearLayout list = card();
         for (int n = 0; n < shelf.length; n++) {
