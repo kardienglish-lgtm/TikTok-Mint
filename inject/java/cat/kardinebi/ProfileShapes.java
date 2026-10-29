@@ -147,6 +147,12 @@ public final class ProfileShapes {
         changed();
     }
 
+    static void resetCustomisation(Context context) {
+        AccountAppearance.prefs(context).edit().remove(KEY_TYPE).remove(KEY_COLOUR)
+                .remove(KEY_SIZE).remove(KEY_STROKE).apply();
+        changed();
+    }
+
     private static void changed() {
         reload();
         ArrayList<View> previews;
@@ -177,7 +183,7 @@ public final class ProfileShapes {
                 drawGeometry(canvas, new Rect(dp(getContext(), 8), dp(getContext(), 8),
                         getWidth() - dp(getContext(), 8), getHeight() - dp(getContext(), 8)),
                         getContext(), fill, outline);
-                surface.setColor(Skin.material3(getContext()).mutedText);
+                surface.setColor(Skin.material3(getContext()).muted());
                 surface.setTextSize(dp(getContext(), 11));
                 canvas.drawText("Предпросмотр фона профиля", dp(getContext(), 14),
                         getHeight() - dp(getContext(), 12), surface);
