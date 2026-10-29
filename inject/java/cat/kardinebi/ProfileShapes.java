@@ -20,6 +20,7 @@ import java.util.WeakHashMap;
 /** Static Material 3 Expressive geometry behind profile content. Drawn once; never animated. */
 public final class ProfileShapes {
     private static final String KEY = "profile_shapes_background";
+    private static final boolean COMMENT_BACKGROUNDS = false;
     private static final String KEY_TYPE = "profile_shapes_type";
     private static final String KEY_COLOUR = "profile_shapes_colour";
     private static final String KEY_SIZE = "profile_shapes_size";
@@ -37,7 +38,7 @@ public final class ProfileShapes {
      * Never decorate a recycled row, author avatar, composer or reaction control.
      */
     static void installCommentBackground(View cell) {
-        if (cell == null || !enabled() || !Motion.enabled(cell.getContext())) return;
+        if (cell == null || COMMENT_BACKGROUNDS || !enabled() || !Motion.enabled(cell.getContext())) return;
         android.util.DisplayMetrics metrics = cell.getResources().getDisplayMetrics();
         int minWidth = Math.max(240, (int) (metrics.widthPixels * 0.68f));
         int minHeight = Math.max(220, (int) (220f * metrics.density));
